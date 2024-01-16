@@ -1,4 +1,3 @@
-import time
 import os
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -39,22 +38,40 @@ class MyAcg():
         #============== Login ==============
         self.driver = webdriver.Chrome(service=service,options=options)
         self.driver.get(URL)
-        account_element = self.driver.find_element(by = By.NAME, value="account")
-        password_element = self.driver.find_element(by = By.NAME, value="password")
-        account_element.clear()
-        password_element.clear()
-        account_element.send_keys(account)
-        password_element.send_keys(password)
-
-        Login_btn = self.driver.find_element(by = By.XPATH, value = '//*[@id="form1"]/div/div/div[2]/div[5]/div[1]/a')
-        Login_btn.click()
-        time.sleep(5)
+        
+        #login account
+        try:
+            account_element = WebDriverWait(self.driver, 8).until(
+                EC.presence_of_element_located((By.NAME, "account")))
+            account_element.clear()
+            account_element.send_keys(account)
+        except:
+            print("can't find 'login account' element, or connection timed out")
+            return False
+        
+        #login password
+        try:
+            password_element = WebDriverWait(self.driver, 8).until(
+                EC.presence_of_element_located((By.NAME, "password")))
+            password_element.clear()
+            password_element.send_keys(password)
+        except:
+            print("can't find 'login password' element, or connection timed out")
+            return False
+        
+        #login button
+        try:
+            Login_btn = WebDriverWait(self.driver, 8).until(
+                EC.presence_of_element_located((By.XPATH, '//*[@id="form1"]/div/div/div[2]/div[5]/div[1]/a')))
+            Login_btn.click()
+        except:
+            print("can't find 'login button' element, or connection timed out")
+            return False
 
         #============== Variables ==============
         self.last = ""
 
         #find 我的賣場 element and click
-
         try:
             locate_store = (By.XPATH, '//*[@id="topbar"]/div/ul/li[1]/a')
             Store = WebDriverWait(self.driver, 10).until(
@@ -68,26 +85,36 @@ class MyAcg():
 
     #find search bar and search
     def printer(self, order):
-        with open('成功列印的出貨單.txt', 'r') as file:
+        #check if enter the repeat order
+        with open('printed.txt', 'a+') as file:
             for line in file:
                 line_text = line.strip()
                 if line_text == order:
                     print("這單可能重複了喔~你再想想")
                     return False
-
+                
+        #check if last one is closed, the popup window had been handled
         try:
-            search_bar = self.driver.find_element(By.NAME, 'o_num')
+            search_bar = self.driver.find_element(By.NAME, 'o_num') #search bar element
             search_bar.clear()
             search_bar.send_keys(order)
-            
-            search = self.driver.find_element(By.XPATH, '//*[@id="search_goods"]/div[4]/ul/li[2]/a')
+            search = self.driver.find_element(By.XPATH, '//*[@id="search_goods"]/div[4]/ul/li[2]/a') #search button element
             search.click()
         except:
             print("你可能沒有按'我知道了',打開買動漫,按下去")
             return False
         
+        #check if the order exist
+        try:
+            no_order = self.driver.find_element(By.XPATH, '//*[@id="wrap"]/div[2]/div/div[2]/div/span[1]')
+            no_order_text = no_order.text
+            if no_order_text == "您沒有訂單，趕快到買動漫逛逛吧！":
+                print("沒有這一單!")
+                return False
+        except:
+            pass
+        
         #等待直到check box出現並勾選
-        # self.doc = Ex.Excel()
         try:
             checkbox = WebDriverWait(self.driver, 8).until(
                 EC.presence_of_element_located((By.ID, "oid_check_" + order[3:])))
@@ -96,10 +123,13 @@ class MyAcg():
             return False
 
         # use Javascript to click checkbox
-        self.driver.execute_script("arguments[0].click();", checkbox)
-        
-        print_order = self.driver.find_element(By.ID, 'PrintBatch')
-        print_order.click()
+        try:
+            self.driver.execute_script("arguments[0].click();", checkbox)  
+            print_order = self.driver.find_element(By.ID, 'PrintBatch')
+            print_order.click()
+        except:
+            print("can't find check box")
+            return False
 
         #測試是否有開啟新分頁
         try:
@@ -125,20 +155,26 @@ class MyAcg():
             print("列印發生錯誤!")
             return False
         
-        #列印
-        self.driver.execute_script('window.print();')
+        #excute printing
+        try:
+            self.driver.execute_script('window.print();')
+            print("成功列印")
+        except:
+            print("列印失敗，不會記錄貨單!(但會送出出貨通知)")
+            return False
         
-        print("成功列印")
-        
-        self.driver.close()
-        self.driver.switch_to.window(self.driver.window_handles[0])
+        #close opend tab
+        try:
+            self.driver.close()
+            self.driver.switch_to.window(self.driver.window_handles[0])
+        except:
+            print("成功列印出貨單，已經記錄在文件中。但關閉分頁時發生異常，請手動關閉'出貨單'分頁!!!!")
 
-        self.last = order
         return True
 
     def save(self, order):
         try:
-            with open('成功列印的出貨單.txt', 'a') as file:
+            with open('printed.txt', 'a+') as file:
                 file.write(order + '\n')
                 print(f"成功寫入貨單: {order}")
         except:
@@ -161,7 +197,6 @@ if __name__ == "__main__":
         if len(user_input) == 7 and user_input.isdigit():
             if web.printer("PG0" + user_input):
                 web.save("PG0" + user_input)
+                print(f"剛剛輸入的貨單為: PG0{user_input}")
         else:
             print("請輸入七位數字")
-
-        print(f"剛剛輸入的貨單為: PG0{user_input}")
