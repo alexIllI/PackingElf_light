@@ -1,16 +1,23 @@
-import os
+import account_manage as Acc
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait 
 from selenium.webdriver.support import expected_conditions as EC
-import account_manage as Acc
 from selenium.webdriver.chrome.service import Service
-from subprocess import CREATE_NO_WINDOW
 
+import os
+from subprocess import CREATE_NO_WINDOW
+from configparser import ConfigParser
+
+#====================== Config ===============================
+config = ConfigParser()
+config.read("config.ini")
+
+#====================== Path ===============================
 OUTTER_PATH = os.path.abspath(os.getcwd())
 URL = "https://www.myacg.com.tw/login.php?done=http%3A%2F%2Fwww.myacg.com.tw%2Findex.php"
 
-#Chrome Crawler Setting
+#======================== Chrome Crawler Setting ===============================
 options = webdriver.ChromeOptions()
 options.add_experimental_option('excludeSwitches', ['enable-logging'])
 options.add_experimental_option("excludeSwitches", ["enable-automation"])
@@ -53,7 +60,7 @@ class MyAcg():
         
         #login account
         try:
-            account_element = WebDriverWait(self.driver, 8).until(
+            account_element = WebDriverWait(self.driver, config["WebOperation"]["waittime"]).until(
                 EC.presence_of_element_located((By.NAME, "account")))
             account_element.clear()
             account_element.send_keys(account)
@@ -63,7 +70,7 @@ class MyAcg():
         
         #login password
         try:
-            password_element = WebDriverWait(self.driver, 8).until(
+            password_element = WebDriverWait(self.driver, config["WebOperation"]["waittime"]).until(
                 EC.presence_of_element_located((By.NAME, "password")))
             password_element.clear()
             password_element.send_keys(password)
@@ -73,7 +80,7 @@ class MyAcg():
         
         #login button
         try:
-            Login_btn = WebDriverWait(self.driver, 8).until(
+            Login_btn = WebDriverWait(self.driver, config["WebOperation"]["waittime"]).until(
                 EC.presence_of_element_located((By.XPATH, '//*[@id="form1"]/div/div/div[2]/div[5]/div[1]/a')))
             Login_btn.click()
         except:
@@ -83,7 +90,7 @@ class MyAcg():
         #find 我的賣場 element and click
         try:
             locate_store = (By.XPATH, '//*[@id="topbar"]/div/ul/li[1]/a')
-            Store = WebDriverWait(self.driver, 10).until(
+            Store = WebDriverWait(self.driver, config["WebOperation"]["waittime"]).until(
                 EC.presence_of_element_located(locate_store),
                 "Can't find my store button")
         except:
@@ -129,7 +136,7 @@ class MyAcg():
         
         #等待直到check box出現並勾選
         try:
-            checkbox = WebDriverWait(self.driver, 8).until(
+            checkbox = WebDriverWait(self.driver, config["WebOperation"]["waittime"]).until(
                 EC.presence_of_element_located((By.ID, "oid_check_" + order[3:])))
         except:
             print("找不到checkbox,可能沒有這一單,自己開買動漫看一下")
@@ -162,7 +169,7 @@ class MyAcg():
         
         #列印出貨單(找出出貨單元素)
         try:
-            wait = WebDriverWait(self.driver, 10)
+            wait = WebDriverWait(self.driver, config["WebOperation"]["longerwaittime"])
             wait.until(EC.presence_of_element_located((By.TAG_NAME, "body")))
         except:
             print("列印發生錯誤!")
