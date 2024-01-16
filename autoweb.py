@@ -26,18 +26,30 @@ service.creation_flags = CREATE_NO_WINDOW
 class MyAcg():
     def __init__(self):
         
-        #============== Account ==============
-        info = Acc.EncryptedAccountManager()
-        info.load_and_decrypt()
+        #============== Variables ==============
+        self.save_path = 'printed.txt'
+        self.last = ""
         
-        # if there are multiple accounts, change
-        account_info = info.get_account_by_name("meridian")
-        account = account_info["account"]
-        password = account_info["password"]
+        #============== Account ==============
+        try:
+            info = Acc.EncryptedAccountManager()
+            info.load_and_decrypt()
+        
+            # if there are multiple accounts, change
+            account_info = info.get_account_by_name("meridian")
+            account = account_info["account"]
+            password = account_info["password"]
+        except:
+            print("decrypt info ERROR!!")
+            return False
         
         #============== Login ==============
-        self.driver = webdriver.Chrome(service=service,options=options)
-        self.driver.get(URL)
+        try:
+            self.driver = webdriver.Chrome(service=service,options=options)
+            self.driver.get(URL)
+        except:
+            print("error occured when creating webdriver")
+            return False
         
         #login account
         try:
@@ -68,9 +80,6 @@ class MyAcg():
             print("can't find 'login button' element, or connection timed out")
             return False
 
-        #============== Variables ==============
-        self.last = ""
-
         #find 我的賣場 element and click
         try:
             locate_store = (By.XPATH, '//*[@id="topbar"]/div/ul/li[1]/a')
@@ -86,12 +95,16 @@ class MyAcg():
     #find search bar and search
     def printer(self, order):
         #check if enter the repeat order
-        with open('printed.txt', 'a+') as file:
-            for line in file:
-                line_text = line.strip()
-                if line_text == order:
-                    print("這單可能重複了喔~你再想想")
-                    return False
+        try:
+            with open(self.save_path, 'a+') as file:
+                for line in file:
+                    line_text = line.strip()
+                    if line_text == order:
+                        print("這單可能重複了喔~你再想想")
+                        return False
+        except:
+            print(f"open file: '{self.save_path}' error")
+            return False
                 
         #check if last one is closed, the popup window had been handled
         try:
@@ -174,7 +187,7 @@ class MyAcg():
 
     def save(self, order):
         try:
-            with open('printed.txt', 'a+') as file:
+            with open(self.save_path, 'a+') as file:
                 file.write(order + '\n')
                 print(f"成功寫入貨單: {order}")
         except:
