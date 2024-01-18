@@ -1,3 +1,6 @@
+from autoweb import MyAcg
+
+from tkinter import messagebox
 import customtkinter as ctk
 from CTkTable import CTkTable
 from PIL import Image, ImageTk
@@ -7,6 +10,11 @@ from configparser import ConfigParser
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
+        
+        #====================== Chromedriver =========================
+        # self.driver = MyAcg()
+        # while True:
+        #     user_input = input("\n輸入PG0後的貨單號碼,例如:1900723,輸入'stop'來中止程式,再印一次的話要先刪掉舊的: ")
         
         #====================== Config ===============================
         config = ConfigParser()
@@ -27,10 +35,15 @@ class App(ctk.CTk):
         
         ctk.set_appearance_mode("dark")
         
-        #========================== Side Bar =============================
+        #========================== Side Bar ===========================
         self.sidebar = SideBar(self)
         self.Page_printorder = PrintOrder(self)
         
+    def on_closing(self):
+        if messagebox.askokcancel("退出包貨小精靈", "確定要退出? (會自動匯出未登記的貨單)"):
+            # self.driver.shut_down()
+            print("close app")
+            self.destroy()
         
 class SideBar(ctk.CTkFrame):
     def __init__(self, parent):
@@ -86,11 +99,20 @@ class PrintOrder(ctk.CTkFrame):
         prnit_order_container.pack(fill="x", pady=(10, 0), padx=30)
 
         ctk.CTkLabel(master=prnit_order_container, text="PG", text_color="#fff", font=("Iansui", 24)).pack(side="left", padx=(13, 0), pady=5)
-        ctk.CTkComboBox(master=prnit_order_container, state="readonly", width=140, height = 40, font=("Iansui", 20), values=["018", "019", "020", "021"], button_color=parent.theme_color, border_color=parent.theme_color, 
-                    border_width=2, button_hover_color=parent.theme_color_dark, dropdown_hover_color=parent.theme_color_dark, dropdown_fg_color=parent.theme_color, dropdown_text_color=parent.dark0_color).pack(side="left", padx=(13, 0), pady=15)
-        ctk.CTkEntry(master=prnit_order_container, width=300, height = 40, font=("Iansui", 20), placeholder_text="請輸入貨單後五碼", border_color=parent.theme_color, border_width=2).pack(side="left", padx=(13, 0), pady=5)
-        ctk.CTkButton(master=prnit_order_container, width=100, height = 40, text="列印", font=("Iansui", 20), text_color=parent.dark0_color, fg_color=parent.theme_color, hover_color=parent.theme_color_dark).pack(anchor="ne", padx=(40, 0), pady=15, side="left")
+        self.order_combobox = ctk.CTkComboBox(master=prnit_order_container, state="readonly", width=140, height = 40, font=("Iansui", 20), values=["018", "019", "020", "021"], button_color=parent.theme_color, border_color=parent.theme_color, 
+                    border_width=2, button_hover_color=parent.theme_color_dark, dropdown_hover_color=parent.theme_color_dark, dropdown_fg_color=parent.theme_color, dropdown_text_color=parent.dark0_color)
+        self.order_combobox.pack(side="left", padx=(13, 0), pady=15)
+        self.order_entry = ctk.CTkEntry(master=prnit_order_container, width=300, height = 40, font=("Iansui", 20), placeholder_text="請輸入貨單後五碼", border_color=parent.theme_color, border_width=2)
+        self.order_entry.pack(side="left", padx=(13, 0), pady=5)
+        
+        # hotkey binding
+        self.order_entry.bind('<Return>', lambda event: self.printToprinter())
+        # self.order_entry.bind('<Control-8>', lambda event: self.order_combobox.current(0))
+        # self.order_entry.bind('<Control-9>', lambda event: self.order_combobox.current(1))
 
+        ctk.CTkButton(master=prnit_order_container, width=100, height = 40, text="列印", font=("Iansui", 20), text_color=parent.dark0_color, 
+                                          fg_color=parent.theme_color, hover_color=parent.theme_color_dark, command=self.printToprinter).pack(anchor="ne", padx=(40, 0), pady=15, side="left")
+        
         #=============================== ORDER COUNT ======================================
 
         counting_container = ctk.CTkFrame(master=main_view, height=80, fg_color="transparent")
@@ -99,10 +121,10 @@ class PrintOrder(ctk.CTkFrame):
         # total_order = 0
         # sucess_order = 0
         # total_order_string = ""
-        total_order_string_var = ctk.StringVar()
-        sucess_order_string = ctk.StringVar()
-        total_order_string_var.set("儲存位置: 0")
-        sucess_order_string.set("成功列印數量: 0")
+        # total_order_string_var = ctk.StringVar()
+        # sucess_order_string = ctk.StringVar()
+        # total_order_string_var.set("目前貨單總數: 0")
+        # sucess_order_string.set("成功列印數量: 0")
 
         # def click():
         #     global total_order
@@ -113,7 +135,8 @@ class PrintOrder(ctk.CTkFrame):
         total_count_metric = ctk.CTkFrame(master=counting_container, fg_color=parent.dark1_color,width=400, height=50)
         total_count_metric.pack(side="left")
 
-        ctk.CTkLabel(master=total_count_metric, textvariable = total_order_string_var, text_color="#fff", font=("Iansui", 24)).pack(side="left", padx=20, pady=5)
+        self.total_order_number = ctk.CTkLabel(master=total_count_metric, text="目前貨單總數: 0", text_color="#fff", font=("Iansui", 24))
+        self.total_order_number.pack(side="left", padx=20, pady=5)
         
         #=============================== SEARCH BAR ======================================
 
@@ -122,7 +145,7 @@ class PrintOrder(ctk.CTkFrame):
 
         ctk.CTkEntry(master=search_container, width=300, height = 40, font=("Iansui", 20), placeholder_text="搜尋貨單", border_color=parent.theme_color, border_width=2).pack(side="left", padx=(13, 0), pady=5)
 
-        ctk.CTkButton(master=search_container, width=100, height = 40, text="搜尋", font=("Iansui", 20), text_color=parent.dark0_color, fg_color=parent.theme_color, hover_color=parent.theme_color_dark).pack(anchor="ne", padx=(13, 0), pady=5, side="left")
+        ctk.CTkButton(master=search_container, width=100, height = 40, text="搜尋", font=("Iansui", 20), text_color=parent.dark0_color, fg_color=parent.theme_color, hover_color=parent.theme_color_dark, command=self.search_order).pack(anchor="ne", padx=(13, 0), pady=5, side="left")
         ctk.CTkButton(master=search_container, width=100, height = 40, text="刪除", font=("Iansui", 20), text_color=parent.dark0_color, fg_color=parent.theme_color, hover_color=parent.theme_color_dark).pack(anchor="ne", padx=(13, 0), pady=5, side="left")
         ctk.CTkComboBox(master=search_container, state="readonly", width=140, height = 40, font=("Iansui", 20), values=["顯示全部", "成功出貨", "關轉", "取消", "其他異常"], button_color=parent.theme_color, border_color=parent.theme_color, 
                     border_width=2, button_hover_color=parent.theme_color_dark, dropdown_hover_color=parent.theme_color_dark, dropdown_fg_color=parent.theme_color, dropdown_text_color=parent.dark0_color).pack(side="right", padx=(13, 0), pady=5)
@@ -139,7 +162,26 @@ class PrintOrder(ctk.CTkFrame):
         table = CTkTable(master=table_frame, height=36, font=("Iansui", 20), values=table_data, colors=[parent.dark3_color, parent.dark4_color], header_color=parent.theme_color, hover_color=parent.dark5_color)
         table.edit_row(0, text_color=parent.dark0_color, hover_color=parent.theme_color)
         table.pack(expand=True, fill="both", padx=10, pady=10)
+        
+    def printToprinter(self):
+        if not self.order_combobox.get():
+            messagebox.showwarning("沒有選擇輸入前綴", "請選擇貨單PG後數字!")
+            print("empty combobox")
+            return
+        
+        if len(self.order_entry.get()) == 5 and self.order_entry.get().isdigit():
+            print(f"剛剛輸入的貨單為: PG0{self.order_combobox.get()}{self.order_entry.get()}")
+            self.order_entry.delete(0, 'end')
+        else:
+            messagebox.showwarning("貨單後號碼錯誤", "請輸入正確貨單後五碼!")
+            print("wrong order_entry input")
+            self.order_entry.delete(0, 'end')
+        
+    def search_order(self):
+        self.total_order_number.configure(text = "目前貨單總數11111")
+        
 
 if __name__ == "__main__":
     app = App()
+    app.protocol("WM_DELETE_WINDOW", app.on_closing)
     app.mainloop()

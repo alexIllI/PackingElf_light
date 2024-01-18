@@ -204,19 +204,3 @@ class MyAcg():
     def shut_down(self):
         self.driver.quit()
         print("close webdriver")
-        
-if __name__ == "__main__":
-    web = MyAcg()
-    while True:
-        user_input = input("\n輸入PG0後的貨單號碼,例如:1900723,輸入'stop'來中止程式,再印一次的話要先刪掉舊的: ")
-        
-        if user_input.lower() == 'stop':
-            web.shut_down()
-            break
-        
-        if len(user_input) == 7 and user_input.isdigit():
-            if web.printer("PG0" + user_input):
-                web.save("PG0" + user_input)
-                print(f"剛剛輸入的貨單為: PG0{user_input}")
-        else:
-            print("請輸入七位數字")
