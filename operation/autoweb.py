@@ -1,4 +1,5 @@
-import account_manage as Acc
+from operation.account_manage import EncryptedAccountManager
+
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait 
@@ -8,6 +9,23 @@ from selenium.webdriver.chrome.service import Service
 import os
 from subprocess import CREATE_NO_WINDOW
 from configparser import ConfigParser
+from enum import Enum
+
+#====================== Enum ===============================
+class ReturnType(Enum):
+    REPEAT = "REPEAT"
+    OPEN_FILE_ERROR = "OPEN_FILE_ERROR"
+    POPUP_UNSOLVED = "POPUP_UNSOLVED"
+    ORDER_NOT_FOUND = "ORDER_NOT_FOUND"
+    CHECKBOX_NOT_FOUND = "CHECKBOX_NOT_FOUND"
+    CLICKING_CHECKBOX_ERROR = "CLICKING_CHECKBOX_ERROR"
+    ORDER_CANCELED = "ORDER_CANCELED"
+    STORE_CLOSED = "STORE_CLOSED"
+    SWITCH_TAB_ERROR = "SWITCH_TAB_ERROR"
+    LOAD_HTML_BODY_ERROR = "LOAD_HTML_BODY_ERROR"
+    EXCUTE_PRINT_ERROR = "EXCUTE_PRINT_ERROR"
+    CLOSED_TAB_ERROR = "CLOSED_TAB_ERROR"
+    SUCCESS = "SUCCESS"
 
 #====================== Config ===============================
 config = ConfigParser()
@@ -39,16 +57,16 @@ class MyAcg():
         
         #============== Account ==============
         try:
-            info = Acc.EncryptedAccountManager()
+            info = EncryptedAccountManager()
             info.load_and_decrypt()
-        
+            
             # if there are multiple accounts, change
             account_info = info.get_account_by_name("meridian")
             account = account_info["account"]
             password = account_info["password"]
         except:
             print("decrypt info ERROR!!")
-            return False
+            return 
         
         #============== Login ==============
         try:
@@ -56,7 +74,7 @@ class MyAcg():
             self.driver.get(URL)
         except:
             print("error occured when creating webdriver")
-            return False
+            return 
         
         #login account
         try:
@@ -66,7 +84,7 @@ class MyAcg():
             account_element.send_keys(account)
         except:
             print("can't find 'login account' element, or connection timed out")
-            return False
+            return 
         
         #login password
         try:
@@ -76,7 +94,7 @@ class MyAcg():
             password_element.send_keys(password)
         except:
             print("can't find 'login password' element, or connection timed out")
-            return False
+            return 
         
         #login button
         try:
@@ -85,12 +103,12 @@ class MyAcg():
             Login_btn.click()
         except:
             print("can't find 'login button' element, or connection timed out")
-            return False
+            return 
 
         #find 我的賣場 element and click
         try:
             locate_store = (By.XPATH, '//*[@id="topbar"]/div/ul/li[1]/a')
-            Store = WebDriverWait(self.driver, config["WebOperation"]["waittime"]).until(
+            Store = WebDriverWait(self.driver, config["WebOperation"]["longerwaittime"]).until(
                 EC.presence_of_element_located(locate_store),
                 "Can't find my store button")
         except:
@@ -107,11 +125,9 @@ class MyAcg():
                 for line in file:
                     line_text = line.strip()
                     if line_text == order:
-                        print("這單可能重複了喔~你再想想")
-                        return False
+                        return ReturnType.REPEAT
         except:
-            print(f"open file: '{self.save_path}' error")
-            return False
+            return ReturnType.OPEN_FILE_ERROR
                 
         #check if last one is closed, the popup window had been handled
         try:
@@ -121,16 +137,14 @@ class MyAcg():
             search = self.driver.find_element(By.XPATH, '//*[@id="search_goods"]/div[4]/ul/li[2]/a') #search button element
             search.click()
         except:
-            print("你可能沒有按'我知道了',打開買動漫,按下去")
-            return False
+            return ReturnType.POPUP_UNSOLVED
         
         #check if the order exist
         try:
             no_order = self.driver.find_element(By.XPATH, '//*[@id="wrap"]/div[2]/div/div[2]/div/span[1]')
             no_order_text = no_order.text
             if no_order_text == "您沒有訂單，趕快到買動漫逛逛吧！":
-                print("沒有這一單!")
-                return False
+                return ReturnType.ORDER_NOT_FOUND
         except:
             pass
         
@@ -139,8 +153,7 @@ class MyAcg():
             checkbox = WebDriverWait(self.driver, config["WebOperation"]["waittime"]).until(
                 EC.presence_of_element_located((By.ID, "oid_check_" + order[3:])))
         except:
-            print("找不到checkbox,可能沒有這一單,自己開買動漫看一下")
-            return False
+            return ReturnType.CHECKBOX_NOT_FOUND
 
         # use Javascript to click checkbox
         try:
@@ -148,8 +161,7 @@ class MyAcg():
             print_order = self.driver.find_element(By.ID, 'PrintBatch')
             print_order.click()
         except:
-            print("can't find check box")
-            return False
+            return ReturnType.CLICKING_CHECKBOX_ERROR
 
         #測試是否有開啟新分頁
         try:
@@ -159,38 +171,34 @@ class MyAcg():
                 cancel = self.driver.find_element(By.XPATH, '//*[@id="wrap"]/div[2]/div[2]/div[1]/table/tbody/tr[1]/td[1]/div[1]/div/span[2]')
                 element_text = cancel.text
                 if element_text == "取消原因":
-                    print("無法切換視窗(可能是取消，去看買動漫)")
+                    return ReturnType.ORDER_CANCELED
                 else:
-                    print("無法切換視窗(可能是關轉，去看買動漫，如果有我知道了按下去，不然我會當掉)")
+                    return ReturnType.STORE_CLOSED
             except:
-                print("無法切換視窗(可能是關轉，去看買動漫，如果有我知道了按下去，不然我會當掉)")
-
-            return False
+                return ReturnType.SWITCH_TAB_ERROR
         
         #列印出貨單(找出出貨單元素)
         try:
             wait = WebDriverWait(self.driver, config["WebOperation"]["longerwaittime"])
             wait.until(EC.presence_of_element_located((By.TAG_NAME, "body")))
         except:
-            print("列印發生錯誤!")
-            return False
+            return ReturnType.LOAD_HTML_BODY_ERROR
         
         #excute printing
         try:
             self.driver.execute_script('window.print();')
             print("成功列印")
         except:
-            print("列印失敗，不會記錄貨單!(但會送出出貨通知)")
-            return False
+            return ReturnType.EXCUTE_PRINT_ERROR
         
         #close opend tab
         try:
             self.driver.close()
             self.driver.switch_to.window(self.driver.window_handles[0])
         except:
-            print("成功列印出貨單，已經記錄在文件中。但關閉分頁時發生異常，請手動關閉'出貨單'分頁!!!!")
-
-        return True
+            return ReturnType.CLOSED_TAB_ERROR
+        
+        return ReturnType.SUCCESS
 
     def save(self, order):
         try:

@@ -1,10 +1,11 @@
-from autoweb import MyAcg
+from operation.autoweb import MyAcg, ReturnType
 
-from tkinter import messagebox
 import customtkinter as ctk
 from CTkTable import CTkTable
+from tkinter import messagebox
 from PIL import Image, ImageTk
 
+import datetime
 from configparser import ConfigParser
 
 class App(ctk.CTk):
@@ -12,9 +13,7 @@ class App(ctk.CTk):
         super().__init__()
         
         #====================== Chromedriver =========================
-        # self.driver = MyAcg()
-        # while True:
-        #     user_input = input("\n輸入PG0後的貨單號碼,例如:1900723,輸入'stop'來中止程式,再印一次的話要先刪掉舊的: ")
+        self.driver = MyAcg()
         
         #====================== Config ===============================
         config = ConfigParser()
@@ -41,7 +40,7 @@ class App(ctk.CTk):
         
     def on_closing(self):
         if messagebox.askokcancel("退出包貨小精靈", "確定要退出? (會自動匯出未登記的貨單)"):
-            # self.driver.shut_down()
+            self.driver.shut_down()
             print("close app")
             self.destroy()
         
@@ -76,6 +75,12 @@ class PrintOrder(ctk.CTkFrame):
     def __init__(self, parent):
         super().__init__(parent)
         
+        #=============================== VARIABLES ======================================
+        self.total_order = 0
+        self.success_order = 0
+        self.driver = parent.driver
+        
+        #=============================== SET UP ======================================
         main_view = ctk.CTkFrame(master=parent, fg_color=parent.dark0_color,  width=900, height=800, corner_radius=0)
         main_view.pack_propagate(0)
         main_view.pack(side="left")
@@ -118,25 +123,11 @@ class PrintOrder(ctk.CTkFrame):
         counting_container = ctk.CTkFrame(master=main_view, height=80, fg_color="transparent")
         counting_container.pack(fill="x", pady=(70, 0), padx=40)
 
-        # total_order = 0
-        # sucess_order = 0
-        # total_order_string = ""
-        # total_order_string_var = ctk.StringVar()
-        # sucess_order_string = ctk.StringVar()
-        # total_order_string_var.set("目前貨單總數: 0")
-        # sucess_order_string.set("成功列印數量: 0")
-
-        # def click():
-        #     global total_order
-        #     total_order = total_order + 1
-        #     total_order_string = "儲存位置: " + str(total_order)
-        #     total_order_string_var.set(total_order_string)
-
         total_count_metric = ctk.CTkFrame(master=counting_container, fg_color=parent.dark1_color,width=400, height=50)
         total_count_metric.pack(side="left")
 
-        self.total_order_number = ctk.CTkLabel(master=total_count_metric, text="目前貨單總數: 0", text_color="#fff", font=("Iansui", 24))
-        self.total_order_number.pack(side="left", padx=20, pady=5)
+        self.label_total_order_number = ctk.CTkLabel(master=total_count_metric, text="目前貨單總數: 0", text_color="#fff", font=("Iansui", 24))
+        self.label_total_order_number.pack(side="left", padx=20, pady=5)
         
         #=============================== SEARCH BAR ======================================
 
@@ -153,15 +144,14 @@ class PrintOrder(ctk.CTkFrame):
         #============================ TABLE ============================
 
         table_data = [
-            ["時間", "貨單編號", "狀態", "儲存狀態"],
-            ["-","-","-","-"]
+            ["時間", "貨單編號", "狀態", "儲存狀態"]
         ]
 
         table_frame = ctk.CTkScrollableFrame(master=main_view, fg_color="transparent")
         table_frame.pack(expand=True, fill="both", padx=27, pady=5)
-        table = CTkTable(master=table_frame, height=36, font=("Iansui", 20), values=table_data, colors=[parent.dark3_color, parent.dark4_color], header_color=parent.theme_color, hover_color=parent.dark5_color)
-        table.edit_row(0, text_color=parent.dark0_color, hover_color=parent.theme_color)
-        table.pack(expand=True, fill="both", padx=10, pady=10)
+        self.printed_order_table = CTkTable(master=table_frame, height=36, font=("Iansui", 20), values=table_data, colors=[parent.dark3_color, parent.dark4_color], header_color=parent.theme_color, hover_color=parent.dark5_color)
+        self.printed_order_table.edit_row(0, text_color=parent.dark0_color, hover_color=parent.theme_color)
+        self.printed_order_table.pack(expand=True, fill="both", padx=10, pady=10)
         
     def printToprinter(self):
         if not self.order_combobox.get():
@@ -169,16 +159,83 @@ class PrintOrder(ctk.CTkFrame):
             print("empty combobox")
             return
         
-        if len(self.order_entry.get()) == 5 and self.order_entry.get().isdigit():
-            print(f"剛剛輸入的貨單為: PG0{self.order_combobox.get()}{self.order_entry.get()}")
+        if len(self.order_entry.get()) != 5:
+            messagebox.showwarning("貨單後號碼錯誤", "請輸入貨單'後五碼'!")
+            print("wrong order length")
             self.order_entry.delete(0, 'end')
+            return
+            
+        if self.order_entry.get().isdigit():
+            messagebox.showwarning("貨單後號碼錯誤", "請只輸入數字!")
+            print("wrong order type")
+            self.order_entry.delete(0, 'end')
+            return
+        
+        current_order = f"PG{self.order_combobox.get()}{self.order_entry.get()}"
+        self.order_entry.delete(0, 'end')
+        result = self.driver.printer(current_order)
+          
+        if result == ReturnType.REPEAT:
+            messagebox.showwarning("貨單後號碼錯誤", "這單剛剛可能印過了喔~你再想想")
+            print("repeat")
+            
+        elif result == ReturnType.OPEN_FILE_ERROR:
+            print("openfile error")
+            
+        elif result == ReturnType.POPUP_UNSOLVED:
+            messagebox.showwarning("網頁自動化錯誤", "你可能沒有按'我知道了',打開買動漫,按下去")
+            print("popup unsolved")
+        
+        elif result == ReturnType.ORDER_NOT_FOUND:
+            messagebox.showwarning("貨單後號碼錯誤", "沒有這一單!")
+            print("order not found")
+            
+        elif result == ReturnType.CHECKBOX_NOT_FOUND:
+            messagebox.showwarning("網頁自動化錯誤", "找不到checkbox,可能沒有這一單,自己開買動漫看一下")
+            print("check box not found")
+            
+        elif result == ReturnType.CLICKING_CHECKBOX_ERROR:
+            print("can't click check box")
+            
+        elif result == ReturnType.ORDER_CANCELED:
+            messagebox.showwarning("取消", "此單已被取消!請至買動漫確認)")
+            self.printed_order_table.add_row([datetime.datetime.now().strftime("%H:%M:%S"),current_order,"取消","-"],1)
+            self.total_order += 1
+            print("order canceled")
+            
+        elif result == ReturnType.STORE_CLOSED:
+            messagebox.showwarning("網頁自動化錯誤", "無法切換視窗(可能是關轉，去看買動漫，如果有我知道了按下去，不然我會當掉)")
+            # self.printed_order_table.add_row([datetime.datetime.now().strftime("%H:%M:%S"),current_order,"關轉","-"],1)
+            print("store closed")
+            
+        elif result == ReturnType.SWITCH_TAB_ERROR:
+            messagebox.showwarning("網頁自動化錯誤", "無法切換視窗(可能是關轉，去看買動漫，如果有我知道了按下去，不然我會當掉)")
+            print("switch tab error")
+            
+        elif result == ReturnType.LOAD_HTML_BODY_ERROR:
+            print("loading html body error")
+            
+        elif result == ReturnType.EXCUTE_PRINT_ERROR:
+            messagebox.showwarning("列印失敗", "列印失敗，不會記錄貨單!請再列印一次")
+            print("excute print error")
+            
+        elif result == ReturnType.CLOSED_TAB_ERROR:
+            messagebox.showwarning("網頁自動化錯誤", "成功列印出貨單，已經記錄在文件中。但關閉分頁時發生異常，請手動關閉'出貨單'分頁!!!!")
+            self.printed_order_table.add_row([datetime.datetime.now().strftime("%H:%M:%S"),current_order,"成功","-"],1)
+            self.total_order += 1
+            self.success_order += 1
+            print("closed tab error")
+            
+        elif result == ReturnType.SUCCESS:
+            self.printed_order_table.add_row([datetime.datetime.now().strftime("%H:%M:%S"),current_order,"成功","-"],1)
+            print("Success!")
+        
         else:
-            messagebox.showwarning("貨單後號碼錯誤", "請輸入正確貨單後五碼!")
-            print("wrong order_entry input")
-            self.order_entry.delete(0, 'end')
+            print("Enum error!")
+            return
         
     def search_order(self):
-        self.total_order_number.configure(text = "目前貨單總數11111")
+        self.label_total_order_number.configure(text = f"目前貨單總數: {self.total_order}")
         
 
 if __name__ == "__main__":

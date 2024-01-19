@@ -6,7 +6,7 @@ class EncryptedAccountManager:
     def __init__(self):
         self.key = b'u\xfeT\xcc\x00\x9dZX\x11\x8a\xed/\xb63\xcb4'
         self.accounts = []
-        self.file_path = './/accounts.bin'
+        self.file_path = 'operation\\accounts.bin'
         
 
     @staticmethod
