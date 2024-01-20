@@ -125,9 +125,15 @@ class PrintOrder(ctk.CTkFrame):
 
         total_count_metric = ctk.CTkFrame(master=counting_container, fg_color=parent.dark1_color,width=400, height=50)
         total_count_metric.pack(side="left")
+        
+        success_count_metric = ctk.CTkFrame(master=counting_container, fg_color=parent.dark1_color,width=400, height=50)
+        success_count_metric.pack(side="right")
 
         self.label_total_order_number = ctk.CTkLabel(master=total_count_metric, text="目前貨單總數: 0", text_color="#fff", font=("Iansui", 24))
         self.label_total_order_number.pack(side="left", padx=20, pady=5)
+        
+        self.label_success_order_number = ctk.CTkLabel(master=success_count_metric, text="成功列印貨單總數: 0", text_color="#fff", font=("Iansui", 24))
+        self.label_success_order_number.pack(side="left", padx=20, pady=5)
         
         #=============================== SEARCH BAR ======================================
 
@@ -165,9 +171,9 @@ class PrintOrder(ctk.CTkFrame):
             self.order_entry.delete(0, 'end')
             return
             
-        if self.order_entry.get().isdigit():
+        if not self.order_entry.get().isdigit():
             messagebox.showwarning("貨單後號碼錯誤", "請只輸入數字!")
-            print("wrong order type")
+            print("wrong order number type")
             self.order_entry.delete(0, 'end')
             return
         
@@ -186,6 +192,10 @@ class PrintOrder(ctk.CTkFrame):
             messagebox.showwarning("網頁自動化錯誤", "你可能沒有按'我知道了',打開買動漫,按下去")
             print("popup unsolved")
         
+        elif result == ReturnType.ALREADY_FINISH:
+            messagebox.showwarning("列印出貨單錯誤", "該訂單已取貨!")
+            print("already finished")
+        
         elif result == ReturnType.ORDER_NOT_FOUND:
             messagebox.showwarning("貨單後號碼錯誤", "沒有這一單!")
             print("order not found")
@@ -201,6 +211,7 @@ class PrintOrder(ctk.CTkFrame):
             messagebox.showwarning("取消", "此單已被取消!請至買動漫確認)")
             self.printed_order_table.add_row([datetime.datetime.now().strftime("%H:%M:%S"),current_order,"取消","-"],1)
             self.total_order += 1
+            self.label_total_order_number.configure(text = f"目前貨單總數: {self.total_order}")
             print("order canceled")
             
         elif result == ReturnType.STORE_CLOSED:
@@ -224,10 +235,16 @@ class PrintOrder(ctk.CTkFrame):
             self.printed_order_table.add_row([datetime.datetime.now().strftime("%H:%M:%S"),current_order,"成功","-"],1)
             self.total_order += 1
             self.success_order += 1
+            self.label_total_order_number.configure(text = f"目前貨單總數: {self.total_order}")
+            self.label_success_order_number.configure(text = f"成功列印貨單總數: {self.success_order}")
             print("closed tab error")
             
         elif result == ReturnType.SUCCESS:
             self.printed_order_table.add_row([datetime.datetime.now().strftime("%H:%M:%S"),current_order,"成功","-"],1)
+            self.total_order += 1
+            self.success_order += 1
+            self.label_total_order_number.configure(text = f"目前貨單總數: {self.total_order}")
+            self.label_success_order_number.configure(text = f"成功列印貨單總數: {self.success_order}")
             print("Success!")
         
         else:

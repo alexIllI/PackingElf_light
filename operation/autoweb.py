@@ -16,6 +16,7 @@ class ReturnType(Enum):
     REPEAT = "REPEAT"
     OPEN_FILE_ERROR = "OPEN_FILE_ERROR"
     POPUP_UNSOLVED = "POPUP_UNSOLVED"
+    ALREADY_FINISH = "ALREADY_FINISH"
     ORDER_NOT_FOUND = "ORDER_NOT_FOUND"
     CHECKBOX_NOT_FOUND = "CHECKBOX_NOT_FOUND"
     CLICKING_CHECKBOX_ERROR = "CLICKING_CHECKBOX_ERROR"
@@ -139,7 +140,23 @@ class MyAcg():
         except:
             return ReturnType.POPUP_UNSOLVED
         
+        try:
+            self.driver.find_element(By.XPATH, '//*[@id="wrap"]/div[2]/div[2]/div[1]/table/tbody/tr[1]/td[1]/div[1]')
+            return ReturnType.ALREADY_FINISH
+        except:
+            pass
+        
+        #======================================= TEST ====================================================
         #check if the order exist
+        try:
+            no_order = self.driver.find_element(By.XPATH, '//*[@id="wrap"]/div[2]/div/div[2]/div/span[1]')
+            no_order_text = no_order.text
+            if no_order_text == "您沒有訂單，趕快到買動漫逛逛吧！":
+                return ReturnType.SUCCESS
+        except:
+            pass
+        #=================================================================================================
+        
         try:
             no_order = self.driver.find_element(By.XPATH, '//*[@id="wrap"]/div[2]/div/div[2]/div/span[1]')
             no_order_text = no_order.text
