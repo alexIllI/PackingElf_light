@@ -1,31 +1,42 @@
 from operation.autoweb import MyAcg, ReturnType
+from operation.database_operation import DataBase
 
 import customtkinter as ctk
+import tkinter
+from tkinter import ttk
 from CTkTable import CTkTable
 from tkinter import messagebox
 from PIL import Image, ImageTk
 
-import datetime
+from datetime import datetime, timedelta
 from configparser import ConfigParser
 
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
         
-        #====================== Chromedriver =========================
+        #====================== Operation =========================
         self.driver = MyAcg()
+        self.database = DataBase(datetime.now().strftime('Printed_Order_%Y_%m_%d'), 'operation\\data.db')
+        self.database.check(datetime.now().strftime('Printed_Order_%Y_%m_%d'), (datetime.now()-timedelta(days=1)).strftime('Printed_Order_%Y_%m_%d'))
+        
+        self.total_order = 0
+        self.success_order = 0
+        self.current_id = 0
         
         #====================== Config ===============================
         config = ConfigParser()
         config.read("config.ini")
-        self.theme_color_dark = config["ThemeColor"]["theme_color_dark"]
-        self.theme_color = config["ThemeColor"]["theme_color"]
-        self.dark0_color = config["ThemeColor"]["dark0"]
-        self.dark1_color = config["ThemeColor"]["dark1"]
-        self.dark2_color = config["ThemeColor"]["dark2"]
-        self.dark3_color = config["ThemeColor"]["dark3"]
-        self.dark4_color = config["ThemeColor"]["dark4"]
-        self.dark5_color = config["ThemeColor"]["dark5"]
+        self.theme_color_dark = config["ThemeColor_dark"]["theme_color_dark"]
+        self.theme_color = config["ThemeColor_dark"]["theme_color"]
+        self.dark0_color = config["ThemeColor_dark"]["dark0"]
+        self.dark1_color = config["ThemeColor_dark"]["dark1"]
+        self.dark2_color = config["ThemeColor_dark"]["dark2"]
+        self.dark3_color = config["ThemeColor_dark"]["dark3"]
+        self.dark4_color = config["ThemeColor_dark"]["dark4"]
+        self.dark5_color = config["ThemeColor_dark"]["dark5"]
+        self.cancel_color = config["ThemeColor_dark"]["cancel"]
+        self.close_color = config["ThemeColor_dark"]["close"]
         
         self.geometry("1200x800")
         self.resizable(0,0)
@@ -76,9 +87,11 @@ class PrintOrder(ctk.CTkFrame):
         super().__init__(parent)
         
         #=============================== VARIABLES ======================================
-        self.total_order = 0
-        self.success_order = 0
+        self.total_order = parent.total_order
+        self.success_order = parent.success_order
+        self.current_id = parent.current_id
         self.driver = parent.driver
+        self.database = parent.database
         
         #=============================== SET UP ======================================
         main_view = ctk.CTkFrame(master=parent, fg_color=parent.dark0_color,  width=900, height=800, corner_radius=0)
@@ -113,7 +126,6 @@ class PrintOrder(ctk.CTkFrame):
         # hotkey binding
         self.order_entry.bind('<Return>', lambda event: self.printToprinter())
         # self.order_entry.bind('<Control-8>', lambda event: self.order_combobox.current(0))
-        # self.order_entry.bind('<Control-9>', lambda event: self.order_combobox.current(1))
 
         ctk.CTkButton(master=prnit_order_container, width=100, height = 40, text="列印", font=("Iansui", 20), text_color=parent.dark0_color, 
                                           fg_color=parent.theme_color, hover_color=parent.theme_color_dark, command=self.printToprinter).pack(anchor="ne", padx=(40, 0), pady=15, side="left")
@@ -140,26 +152,140 @@ class PrintOrder(ctk.CTkFrame):
         search_container = ctk.CTkFrame(master=main_view, height=50, fg_color="transparent")
         search_container.pack(fill="x", pady=(10, 0), padx=30)
 
-        ctk.CTkEntry(master=search_container, width=300, height = 40, font=("Iansui", 20), placeholder_text="搜尋貨單", border_color=parent.theme_color, border_width=2).pack(side="left", padx=(13, 0), pady=5)
-
+        self.search_entry = ctk.CTkEntry(master=search_container, width=300, height = 40, font=("Iansui", 20), placeholder_text="搜尋貨單", border_color=parent.theme_color, border_width=2)
+        self.search_entry.pack(side="left", padx=(13, 0), pady=5)
+        self.search_entry.bind('<Return>', lambda event: self.search_order())
+        
         ctk.CTkButton(master=search_container, width=100, height = 40, text="搜尋", font=("Iansui", 20), text_color=parent.dark0_color, fg_color=parent.theme_color, hover_color=parent.theme_color_dark, command=self.search_order).pack(anchor="ne", padx=(13, 0), pady=5, side="left")
-        ctk.CTkButton(master=search_container, width=100, height = 40, text="刪除", font=("Iansui", 20), text_color=parent.dark0_color, fg_color=parent.theme_color, hover_color=parent.theme_color_dark).pack(anchor="ne", padx=(13, 0), pady=5, side="left")
+        ctk.CTkButton(master=search_container, width=100, height = 40, text="刪除", font=("Iansui", 20), text_color=parent.dark0_color, fg_color=parent.theme_color, hover_color=parent.theme_color_dark, command=self.btn_delete_items).pack(anchor="ne", padx=(13, 0), pady=5, side="left")
         ctk.CTkComboBox(master=search_container, state="readonly", width=140, height = 40, font=("Iansui", 20), values=["顯示全部", "成功出貨", "關轉", "取消", "其他異常"], button_color=parent.theme_color, border_color=parent.theme_color, 
                     border_width=2, button_hover_color=parent.theme_color_dark, dropdown_hover_color=parent.theme_color_dark, dropdown_fg_color=parent.theme_color, dropdown_text_color=parent.dark0_color).pack(side="right", padx=(13, 0), pady=5)
 
-        #============================ TABLE ============================
+        #============================ TABLE ============================             
 
-        table_data = [
-            ["時間", "貨單編號", "狀態", "儲存狀態"]
-        ]
+        table_frame = ctk.CTkFrame(master=main_view, fg_color="transparent")
+        table_frame.pack(expand=True, fill="both", padx=27, pady=10)
+        
+        tree_scroll = ctk.CTkScrollbar(table_frame, button_color=parent.theme_color, button_hover_color=parent.theme_color_dark)
+        tree_scroll.pack(side="right", fill="y")
+        
+        printed_order_table_style = ttk.Style()
+        printed_order_table_style.theme_use("clam")
+        printed_order_table_style.configure("Treeview.Heading", font=("Iansui", 25))
+        printed_order_table_style.configure("Treeview", rowheight = 50, font=("Iansui", 20), background="#fff")
+        printed_order_table_style.layout("Treeview", [('Treeview.treearea', {'sticky': 'nswe'})])
+        
+        self.printed_order_table = ttk.Treeview(table_frame, columns = ('id', 'time', 'order', 'status', 'save_status'), style="Treeview", show = 'headings', yscrollcommand=tree_scroll.set)
+        self.printed_order_table.column("# 1", anchor="center",width=40)
+        self.printed_order_table.column("# 2", anchor="center")
+        self.printed_order_table.column("# 3", anchor="center")
+        self.printed_order_table.column("# 4", anchor="center")
+        self.printed_order_table.column("# 5", anchor="center")
+        self.printed_order_table.heading('id', text = 'id')
+        self.printed_order_table.heading('time', text = '時間')
+        self.printed_order_table.heading('order', text = '貨單編號')
+        self.printed_order_table.heading('status', text = '狀態')
+        self.printed_order_table.heading('save_status', text = '儲存狀態')
+        self.printed_order_table.pack(fill = 'both', expand = True)
+        
+        self.printed_order_table.tag_configure('cancel', background=parent.cancel_color)
+        self.printed_order_table.tag_configure('close', background=parent.close_color)
+        
+        tree_scroll.configure(command=self.printed_order_table.yview)
+        
+        # events
+        def item_select(_):
+            print(self.printed_order_table.selection())
+            for i in self.printed_order_table.selection():
+                print(self.printed_order_table.item(i)['values'])
 
-        table_frame = ctk.CTkScrollableFrame(master=main_view, fg_color="transparent")
-        table_frame.pack(expand=True, fill="both", padx=27, pady=5)
-        self.printed_order_table = CTkTable(master=table_frame, height=36, font=("Iansui", 20), values=table_data, colors=[parent.dark3_color, parent.dark4_color], header_color=parent.theme_color, hover_color=parent.dark5_color)
-        self.printed_order_table.edit_row(0, text_color=parent.dark0_color, hover_color=parent.theme_color)
-        self.printed_order_table.pack(expand=True, fill="both", padx=10, pady=10)
+        def delete_items(_):
+            print('delete pressed')
+            if len(self.printed_order_table.selection()) > 1:
+                messagebox.showwarning("刪除貨單警告", "一次只能刪除一筆貨單，請只選擇一筆刪除!")
+                return
+            
+            if messagebox.askokcancel("刪除貨單", f"確定要刪除 {self.printed_order_table.item(self.printed_order_table.selection())['values'][2]} ? (刪除後不可復原)"):
+                print(f"delete {self.printed_order_table.item(self.printed_order_table.selection())['values'][2]}")
+                self.database.delete_data(self.printed_order_table.item(self.printed_order_table.selection())['values'][2])
+                self.update()
+
+        self.printed_order_table.bind('<<TreeviewSelect>>', item_select)
+        self.printed_order_table.bind('<Delete>', delete_items)
+    
+    def update(self):
+        self.printed_order_table.delete(*self.printed_order_table.get_children())
+        datas = self.database.fetch_all_unrecorded()
+        for data in datas[1:]:
+            self.printed_order_table.insert(parent = '', index = 0, values = data)
+                
+    def search_order(self):
+        if not self.search_entry.get():
+            messagebox.showwarning("搜尋貨單結果", "老哥，先輸入再搜尋好嗎")
+            print("empty combobox")
+            return
+        
+        if len(self.search_entry.get()) != 10:
+            messagebox.showwarning("搜尋貨單結果", "請輸入完整貨單!")
+            print("wrong order length")
+            self.order_entry.delete(0, 'end')
+            return
+        order_number = self.search_entry.get()
+        self.search_entry.delete(0, 'end')
+        
+        # try:
+        result_id = self.database.search_order(order_number)
+        print(result_id)
+        # except Exception as e:
+        #     print(f"Error in main -> search_order: {e}")
+        #     return
+        
+        if result_id:
+            if result_id[1] == "unrecorded":
+                self.printed_order_table.selection_remove(self.printed_order_table.selection())
+                for child in self.printed_order_table.get_children():
+                    if order_number in self.printed_order_table.item(child)['values'][2]:
+                        print(f"find {self.printed_order_table.item(child)['values'][2]} within treeview, id: {result_id[0]}")
+                        self.printed_order_table.selection_set(child)
+                        messagebox.showinfo("搜尋貨單結果", f"""貨單編號: {order_number}\nID: {result_id[0]}
+                                            狀態: {self.printed_order_table.item(child)['values'][3]}\n儲存位置: {self.printed_order_table.item(child)['values'][4]}""")
+                        return
+            else:
+                messagebox.showwarning("搜尋貨單結果", "資料庫中有這筆貨單，但不是在本次應用程式執行後紀錄，因此無法顯示在下方表格!")
+        else:
+            messagebox.showwarning("搜尋貨單結果", "搜尋的貨單不存在!")
+        
+    def btn_delete_items(self):
+        if len(self.printed_order_table.selection()) > 1:
+                messagebox.showwarning("刪除貨單警告", "一次只能刪除一筆貨單，請只選擇一筆刪除!")
+                return
+        
+        print(f"delete {self.printed_order_table.item(self.printed_order_table.selection())['values'][2]}")
+        self.database.delete_data(self.printed_order_table.item(self.printed_order_table.selection())['values'][2])
+        self.update()
         
     def printToprinter(self):
+        def print_cancel_close(_status:str, order):
+            self.total_order += 1
+            self.current_id += 1
+            self.label_total_order_number.configure(text = f"目前貨單總數: {self.total_order}")
+            if _status == "cancel":
+                data_tuple = (self.current_id, datetime.now().strftime('%H:%M:%S'), order, '取消', "-")
+            else:
+                data_tuple = (self.current_id, datetime.now().strftime('%H:%M:%S'), order, '關轉', "-")
+            self.database.insert_data(data_tuple)
+            self.printed_order_table.insert(parent = '', index = 0, values = data_tuple, tags = (_status,))
+        
+        def print_success(order):
+            self.total_order += 1
+            self.success_order += 1
+            self.current_id += 1
+            self.label_total_order_number.configure(text = f"目前貨單總數: {self.total_order}")
+            self.label_success_order_number.configure(text = f"成功列印貨單總數: {self.success_order}")
+            data_tuple = (self.current_id, datetime.now().strftime('%H:%M:%S'), order, '成功', "-")
+            self.database.insert_data(data_tuple)
+            self.printed_order_table.insert(parent = '', index = 0, values = data_tuple)
+        
         if not self.order_combobox.get():
             messagebox.showwarning("沒有選擇輸入前綴", "請選擇貨單PG後數字!")
             print("empty combobox")
@@ -182,11 +308,15 @@ class PrintOrder(ctk.CTkFrame):
         result = self.driver.printer(current_order)
           
         if result == ReturnType.REPEAT:
-            messagebox.showwarning("貨單後號碼錯誤", "這單剛剛可能印過了喔~你再想想")
+            messagebox.showwarning("貨單後號碼錯誤", "出貨單重複!如果想重印這一單，請先將下方同樣貨單編號的紀錄刪除")
             print("repeat")
             
         elif result == ReturnType.OPEN_FILE_ERROR:
             print("openfile error")
+        
+        elif result == ReturnType.MULTIPLE_TAB:
+            messagebox.showwarning("網頁自動化錯誤", "請開啟瀏覽器將買動漫以外的分頁關閉!")
+            print("meltiple tab detected")
             
         elif result == ReturnType.POPUP_UNSOLVED:
             messagebox.showwarning("網頁自動化錯誤", "你可能沒有按'我知道了',打開買動漫,按下去")
@@ -209,14 +339,12 @@ class PrintOrder(ctk.CTkFrame):
             
         elif result == ReturnType.ORDER_CANCELED:
             messagebox.showwarning("取消", "此單已被取消!請至買動漫確認)")
-            self.printed_order_table.add_row([datetime.datetime.now().strftime("%H:%M:%S"),current_order,"取消","-"],1)
-            self.total_order += 1
-            self.label_total_order_number.configure(text = f"目前貨單總數: {self.total_order}")
+            print_cancel_close("cancel", current_order)
             print("order canceled")
             
         elif result == ReturnType.STORE_CLOSED:
             messagebox.showwarning("網頁自動化錯誤", "無法切換視窗(可能是關轉，去看買動漫，如果有我知道了按下去，不然我會當掉)")
-            # self.printed_order_table.add_row([datetime.datetime.now().strftime("%H:%M:%S"),current_order,"關轉","-"],1)
+            print_cancel_close("close", current_order)
             print("store closed")
             
         elif result == ReturnType.SWITCH_TAB_ERROR:
@@ -232,30 +360,21 @@ class PrintOrder(ctk.CTkFrame):
             
         elif result == ReturnType.CLOSED_TAB_ERROR:
             messagebox.showwarning("網頁自動化錯誤", "成功列印出貨單，已經記錄在文件中。但關閉分頁時發生異常，請手動關閉'出貨單'分頁!!!!")
-            self.printed_order_table.add_row([datetime.datetime.now().strftime("%H:%M:%S"),current_order,"成功","-"],1)
-            self.total_order += 1
-            self.success_order += 1
-            self.label_total_order_number.configure(text = f"目前貨單總數: {self.total_order}")
-            self.label_success_order_number.configure(text = f"成功列印貨單總數: {self.success_order}")
+            print_success(current_order)
             print("closed tab error")
             
         elif result == ReturnType.SUCCESS:
-            self.printed_order_table.add_row([datetime.datetime.now().strftime("%H:%M:%S"),current_order,"成功","-"],1)
-            self.total_order += 1
-            self.success_order += 1
-            self.label_total_order_number.configure(text = f"目前貨單總數: {self.total_order}")
-            self.label_success_order_number.configure(text = f"成功列印貨單總數: {self.success_order}")
+            print_success(current_order)
             print("Success!")
         
         else:
             print("Enum error!")
             return
         
-    def search_order(self):
-        self.label_total_order_number.configure(text = f"目前貨單總數: {self.total_order}")
         
 
 if __name__ == "__main__":
     app = App()
     app.protocol("WM_DELETE_WINDOW", app.on_closing)
+    
     app.mainloop()

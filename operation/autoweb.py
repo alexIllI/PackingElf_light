@@ -14,6 +14,7 @@ from enum import Enum
 #====================== Enum ===============================
 class ReturnType(Enum):
     REPEAT = "REPEAT"
+    MULTIPLE_TAB = "MULTIPLE_TAB"
     OPEN_FILE_ERROR = "OPEN_FILE_ERROR"
     POPUP_UNSOLVED = "POPUP_UNSOLVED"
     ALREADY_FINISH = "ALREADY_FINISH"
@@ -129,7 +130,10 @@ class MyAcg():
                         return ReturnType.REPEAT
         except:
             return ReturnType.OPEN_FILE_ERROR
-                
+        
+        if len(self.driver.window_handles) > 1:
+            return ReturnType.MULTIPLE_TAB
+        
         #check if last one is closed, the popup window had been handled
         try:
             search_bar = self.driver.find_element(By.NAME, 'o_num') #search bar element
@@ -152,7 +156,7 @@ class MyAcg():
             no_order = self.driver.find_element(By.XPATH, '//*[@id="wrap"]/div[2]/div/div[2]/div/span[1]')
             no_order_text = no_order.text
             if no_order_text == "您沒有訂單，趕快到買動漫逛逛吧！":
-                return ReturnType.SUCCESS
+                return ReturnType.ORDER_CANCELED
         except:
             pass
         #=================================================================================================
