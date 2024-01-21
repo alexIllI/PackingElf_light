@@ -92,6 +92,8 @@ class PrintOrder(ctk.CTkFrame):
         self.current_id = parent.current_id
         self.driver = parent.driver
         self.database = parent.database
+        self.cancel_color = parent.cancel_color
+        self.close_color = parent.close_color
         
         #=============================== SET UP ======================================
         main_view = ctk.CTkFrame(master=parent, fg_color=parent.dark0_color,  width=900, height=800, corner_radius=0)
@@ -158,8 +160,9 @@ class PrintOrder(ctk.CTkFrame):
         
         ctk.CTkButton(master=search_container, width=100, height = 40, text="搜尋", font=("Iansui", 20), text_color=parent.dark0_color, fg_color=parent.theme_color, hover_color=parent.theme_color_dark, command=self.search_order).pack(anchor="ne", padx=(13, 0), pady=5, side="left")
         ctk.CTkButton(master=search_container, width=100, height = 40, text="刪除", font=("Iansui", 20), text_color=parent.dark0_color, fg_color=parent.theme_color, hover_color=parent.theme_color_dark, command=self.btn_delete_items).pack(anchor="ne", padx=(13, 0), pady=5, side="left")
-        ctk.CTkComboBox(master=search_container, state="readonly", width=140, height = 40, font=("Iansui", 20), values=["顯示全部", "成功出貨", "關轉", "取消", "其他異常"], button_color=parent.theme_color, border_color=parent.theme_color, 
-                    border_width=2, button_hover_color=parent.theme_color_dark, dropdown_hover_color=parent.theme_color_dark, dropdown_fg_color=parent.theme_color, dropdown_text_color=parent.dark0_color).pack(side="right", padx=(13, 0), pady=5)
+        self.view_status_enrty = ctk.CTkComboBox(master=search_container, state="readonly", width=140, height = 40, font=("Iansui", 20), values=["顯示全部", "成功出貨", "關轉", "取消"], button_color=parent.theme_color, border_color=parent.theme_color, 
+                    border_width=2, button_hover_color=parent.theme_color_dark, dropdown_hover_color=parent.theme_color_dark, dropdown_fg_color=parent.theme_color, dropdown_text_color=parent.dark0_color, command=self.update)
+        self.view_status_enrty.pack(side="right", padx=(13, 0), pady=5)
 
         #============================ TABLE ============================             
 
@@ -192,6 +195,24 @@ class PrintOrder(ctk.CTkFrame):
         self.printed_order_table.tag_configure('close', background=parent.close_color)
         
         tree_scroll.configure(command=self.printed_order_table.yview)
+        for i in range(10):
+            self.total_order += 1
+            self.success_order += 1
+            self.current_id += 1
+            self.database.insert_data(self.current_id, datetime.now().strftime('%H:%M:%S'), f"PG000{i}", 'success', "-")
+            self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, datetime.now().strftime('%H:%M:%S'), f"PG000{i}", 'success', "-"))
+        
+        self.total_order += 1
+        self.success_order += 1
+        self.current_id += 1
+        self.database.insert_data(self.current_id, datetime.now().strftime('%H:%M:%S'), f"PG000{11}", 'close', "-")
+        self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, datetime.now().strftime('%H:%M:%S'), f"PG000{11}", 'close', "-"), tags = ("close",))
+        
+        self.total_order += 1
+        self.success_order += 1
+        self.current_id += 1
+        self.database.insert_data(self.current_id, datetime.now().strftime('%H:%M:%S'), f"PG000{22}", 'close', "-")
+        self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, datetime.now().strftime('%H:%M:%S'), f"PG000{22}", 'close', "-"), tags = ("close",))
         
         # events
         def item_select(_):
@@ -213,11 +234,24 @@ class PrintOrder(ctk.CTkFrame):
         self.printed_order_table.bind('<<TreeviewSelect>>', item_select)
         self.printed_order_table.bind('<Delete>', delete_items)
     
-    def update(self):
+    def update(self, status):
         self.printed_order_table.delete(*self.printed_order_table.get_children())
-        datas = self.database.fetch_all_unrecorded()
+        if status == "顯示全部":
+            datas = self.database.fetch_all_unrecorded("all")
+        elif status == "成功出貨":
+            datas = self.database.fetch_all_unrecorded("success")
+        elif status == "關轉":
+            datas = self.database.fetch_all_unrecorded("close")
+        elif status == "取消":
+            datas = self.database.fetch_all_unrecorded("cancel")
+        
         for data in datas[1:]:
-            self.printed_order_table.insert(parent = '', index = 0, values = data)
+            if data[3] == 'success':
+                self.printed_order_table.insert(parent = '', index = 0, values = (data[0], data[1], data[2], "成功", data[4]))
+            if data[3] == 'close':
+                self.printed_order_table.insert(parent = '', index = 0, values = (data[0], data[1], data[2], "關轉", data[4]), tags = (status,))
+            if data[3] == 'cancel':
+                self.printed_order_table.insert(parent = '', index = 0, values = (data[0], data[1], data[2], "取消", data[4]), tags = (status,))
                 
     def search_order(self):
         if not self.search_entry.get():
@@ -247,8 +281,7 @@ class PrintOrder(ctk.CTkFrame):
                     if order_number in self.printed_order_table.item(child)['values'][2]:
                         print(f"find {self.printed_order_table.item(child)['values'][2]} within treeview, id: {result_id[0]}")
                         self.printed_order_table.selection_set(child)
-                        messagebox.showinfo("搜尋貨單結果", f"""貨單編號: {order_number}\nID: {result_id[0]}
-                                            狀態: {self.printed_order_table.item(child)['values'][3]}\n儲存位置: {self.printed_order_table.item(child)['values'][4]}""")
+                        messagebox.showinfo("搜尋貨單結果", f"貨單編號: {order_number}\nID: {result_id[0]}\n狀態: {self.printed_order_table.item(child)['values'][3]}\n儲存位置: {self.printed_order_table.item(child)['values'][4]}")
                         return
             else:
                 messagebox.showwarning("搜尋貨單結果", "資料庫中有這筆貨單，但不是在本次應用程式執行後紀錄，因此無法顯示在下方表格!")
@@ -262,19 +295,19 @@ class PrintOrder(ctk.CTkFrame):
         
         print(f"delete {self.printed_order_table.item(self.printed_order_table.selection())['values'][2]}")
         self.database.delete_data(self.printed_order_table.item(self.printed_order_table.selection())['values'][2])
-        self.update()
+        self.update(self.view_status_enrty.get())
         
     def printToprinter(self):
         def print_cancel_close(_status:str, order):
             self.total_order += 1
             self.current_id += 1
             self.label_total_order_number.configure(text = f"目前貨單總數: {self.total_order}")
-            if _status == "cancel":
-                data_tuple = (self.current_id, datetime.now().strftime('%H:%M:%S'), order, '取消', "-")
+            cur_time = datetime.now().strftime('%H:%M:%S')
+            self.database.insert_data(self.current_id, cur_time, order, _status, "-")
+            if _status == "close":
+                self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, cur_time, order, "關轉", "-"), tags = (_status,))
             else:
-                data_tuple = (self.current_id, datetime.now().strftime('%H:%M:%S'), order, '關轉', "-")
-            self.database.insert_data(data_tuple)
-            self.printed_order_table.insert(parent = '', index = 0, values = data_tuple, tags = (_status,))
+                self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, cur_time, order, "取消", "-"), tags = (_status,))
         
         def print_success(order):
             self.total_order += 1
@@ -282,9 +315,9 @@ class PrintOrder(ctk.CTkFrame):
             self.current_id += 1
             self.label_total_order_number.configure(text = f"目前貨單總數: {self.total_order}")
             self.label_success_order_number.configure(text = f"成功列印貨單總數: {self.success_order}")
-            data_tuple = (self.current_id, datetime.now().strftime('%H:%M:%S'), order, '成功', "-")
-            self.database.insert_data(data_tuple)
-            self.printed_order_table.insert(parent = '', index = 0, values = data_tuple)
+            cur_time = datetime.now().strftime('%H:%M:%S')
+            self.database.insert_data(self.current_id, cur_time, order, 'success', "-")
+            self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, cur_time, order, '成功', "-"))
         
         if not self.order_combobox.get():
             messagebox.showwarning("沒有選擇輸入前綴", "請選擇貨單PG後數字!")

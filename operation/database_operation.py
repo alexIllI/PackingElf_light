@@ -37,10 +37,10 @@ class DataBase():
             return
     
         
-    def insert_data(self, data_tuple):
+    def insert_data(self, table_id:int, time:str, order_number:str, status:str, save_status:str):
         try:
             data_insert_query = f"INSERT INTO {self.db_name} (table_id, time, order_number, status, save_status, record) VALUES (?, ?, ?, ?, ?, ?)"
-            data_insert_tuple = (data_tuple[0], data_tuple[1], data_tuple[2], data_tuple[3], data_tuple[4], "unrecorded")
+            data_insert_tuple = (table_id, time, order_number, status, save_status, "unrecorded")
             self.cursor.execute(data_insert_query, data_insert_tuple)
             self.connection.commit()
             print("Data inserted successfully!")
@@ -63,9 +63,17 @@ class DataBase():
             print(f"Error in db_operation -> search_order: {e}")
             return None
     
-    def fetch_all_unrecorded(self):
+    def fetch_all_unrecorded(self, status):
+        if status == "all":
+            try:
+                select_unrecorded_data = f"SELECT * FROM {self.db_name} WHERE record = 'unrecorded'"
+                self.cursor.execute(select_unrecorded_data)
+                return self.cursor.fetchall()
+            except:
+                return []
+            
         try:
-            select_unrecorded_data = f"SELECT * FROM {self.db_name} WHERE record = 'unrecorded'"
+            select_unrecorded_data = f"SELECT * FROM {self.db_name} WHERE record = 'unrecorded' AND status = {status}"
             self.cursor.execute(select_unrecorded_data)
             return self.cursor.fetchall()
         except:
