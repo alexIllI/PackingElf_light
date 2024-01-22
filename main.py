@@ -110,8 +110,10 @@ class PrintOrder(ctk.CTkFrame):
         storage_path_container.pack(fill="x", pady=(45, 0), padx=30)
 
         ctk.CTkLabel(master=storage_path_container, text="儲存位置: ", text_color="#fff", font=("Iansui", 24)).pack(side="left", padx=(13, 0), pady=5)
-        ctk.CTkComboBox(master=storage_path_container, state="readonly", width=200, height = 40, font=("Iansui", 20), values=["貨單.xlsx"], button_color=parent.theme_color, border_color=parent.theme_color, 
-                    border_width=2, button_hover_color=parent.theme_color_dark, dropdown_hover_color=parent.theme_color_dark, dropdown_fg_color=parent.theme_color, dropdown_text_color=parent.dark0_color).pack(side="left", padx=(13, 0), pady=15)
+        self.save_path_combobox = ctk.CTkComboBox(master=storage_path_container, state="readonly", width=200, height = 40, font=("Iansui", 20), values=["貨單.xlsx"], button_color=parent.theme_color, border_color=parent.theme_color, 
+                    border_width=2, button_hover_color=parent.theme_color_dark, dropdown_hover_color=parent.theme_color_dark, dropdown_fg_color=parent.theme_color, dropdown_text_color=parent.dark0_color)
+        self.save_path_combobox.pack(side="left", padx=(13, 0), pady=15)
+        self.save_path_combobox.set("貨單.xlsx")
 
         #=============================== PRINTER ORDER ======================================
 
@@ -122,6 +124,7 @@ class PrintOrder(ctk.CTkFrame):
         self.order_combobox = ctk.CTkComboBox(master=prnit_order_container, state="readonly", width=140, height = 40, font=("Iansui", 20), values=["018", "019", "020", "021"], button_color=parent.theme_color, border_color=parent.theme_color, 
                     border_width=2, button_hover_color=parent.theme_color_dark, dropdown_hover_color=parent.theme_color_dark, dropdown_fg_color=parent.theme_color, dropdown_text_color=parent.dark0_color)
         self.order_combobox.pack(side="left", padx=(13, 0), pady=15)
+        self.order_combobox.set("019")
         self.order_entry = ctk.CTkEntry(master=prnit_order_container, width=300, height = 40, font=("Iansui", 20), placeholder_text="請輸入貨單後五碼", border_color=parent.theme_color, border_width=2)
         self.order_entry.pack(side="left", padx=(13, 0), pady=5)
         
@@ -163,6 +166,7 @@ class PrintOrder(ctk.CTkFrame):
         self.view_status_enrty = ctk.CTkComboBox(master=search_container, state="readonly", width=140, height = 40, font=("Iansui", 20), values=["顯示全部", "成功出貨", "關轉", "取消"], button_color=parent.theme_color, border_color=parent.theme_color, 
                     border_width=2, button_hover_color=parent.theme_color_dark, dropdown_hover_color=parent.theme_color_dark, dropdown_fg_color=parent.theme_color, dropdown_text_color=parent.dark0_color, command=self.update)
         self.view_status_enrty.pack(side="right", padx=(13, 0), pady=5)
+        self.view_status_enrty.set("顯示全部")
 
         #============================ TABLE ============================             
 
@@ -200,19 +204,17 @@ class PrintOrder(ctk.CTkFrame):
             self.success_order += 1
             self.current_id += 1
             self.database.insert_data(self.current_id, datetime.now().strftime('%H:%M:%S'), f"PG000{i}", 'success', "-")
-            self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, datetime.now().strftime('%H:%M:%S'), f"PG000{i}", 'success', "-"))
+            self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, datetime.now().strftime('%H:%M:%S'), f"PG000{i}", '成功', "-"))
         
         self.total_order += 1
-        self.success_order += 1
         self.current_id += 1
         self.database.insert_data(self.current_id, datetime.now().strftime('%H:%M:%S'), f"PG000{11}", 'close', "-")
-        self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, datetime.now().strftime('%H:%M:%S'), f"PG000{11}", 'close', "-"), tags = ("close",))
+        self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, datetime.now().strftime('%H:%M:%S'), f"PG000{11}", '關轉', "-"), tags = ("close",))
         
         self.total_order += 1
-        self.success_order += 1
         self.current_id += 1
         self.database.insert_data(self.current_id, datetime.now().strftime('%H:%M:%S'), f"PG000{22}", 'close', "-")
-        self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, datetime.now().strftime('%H:%M:%S'), f"PG000{22}", 'close', "-"), tags = ("close",))
+        self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, datetime.now().strftime('%H:%M:%S'), f"PG000{22}", '關轉', "-"), tags = ("close",))
         
         # events
         def item_select(_):
@@ -229,73 +231,116 @@ class PrintOrder(ctk.CTkFrame):
             if messagebox.askokcancel("刪除貨單", f"確定要刪除 {self.printed_order_table.item(self.printed_order_table.selection())['values'][2]} ? (刪除後不可復原)"):
                 print(f"delete {self.printed_order_table.item(self.printed_order_table.selection())['values'][2]}")
                 self.database.delete_data(self.printed_order_table.item(self.printed_order_table.selection())['values'][2])
-                self.update()
+                if self.printed_order_table.item(self.printed_order_table.selection())['values'][3] == "成功":
+                    self.success_order -= 1
+                self.total_order -= 1
+                self.update(self.view_status_enrty.get())
+                
+        def deselect_items(_):
+            self.printed_order_table.selection_remove(*self.printed_order_table.selection())
+            print("deselect all items")
 
         self.printed_order_table.bind('<<TreeviewSelect>>', item_select)
         self.printed_order_table.bind('<Delete>', delete_items)
+        self.printed_order_table.bind('<Escape>', deselect_items)
     
     def update(self, status):
         self.printed_order_table.delete(*self.printed_order_table.get_children())
         if status == "顯示全部":
             datas = self.database.fetch_all_unrecorded("all")
         elif status == "成功出貨":
-            datas = self.database.fetch_all_unrecorded("success")
+            datas = self.database.fetch_all_unrecorded('success')
         elif status == "關轉":
-            datas = self.database.fetch_all_unrecorded("close")
+            datas = self.database.fetch_all_unrecorded('close')
         elif status == "取消":
-            datas = self.database.fetch_all_unrecorded("cancel")
+            datas = self.database.fetch_all_unrecorded('cancel')
         
-        for data in datas[1:]:
+        for data in datas:
             if data[3] == 'success':
                 self.printed_order_table.insert(parent = '', index = 0, values = (data[0], data[1], data[2], "成功", data[4]))
             if data[3] == 'close':
-                self.printed_order_table.insert(parent = '', index = 0, values = (data[0], data[1], data[2], "關轉", data[4]), tags = (status,))
+                self.printed_order_table.insert(parent = '', index = 0, values = (data[0], data[1], data[2], "關轉", data[4]), tags = ("close",))
             if data[3] == 'cancel':
-                self.printed_order_table.insert(parent = '', index = 0, values = (data[0], data[1], data[2], "取消", data[4]), tags = (status,))
+                self.printed_order_table.insert(parent = '', index = 0, values = (data[0], data[1], data[2], "取消", data[4]), tags = ("cancel",))
+                
+        self.label_total_order_number.configure(text = f"目前貨單總數: {self.total_order}")
+        self.label_success_order_number.configure(text = f"成功列印貨單總數: {self.success_order}")
                 
     def search_order(self):
         if not self.search_entry.get():
             messagebox.showwarning("搜尋貨單結果", "老哥，先輸入再搜尋好嗎")
-            print("empty combobox")
+            print("empty search entry")
             return
         
         if len(self.search_entry.get()) != 10:
             messagebox.showwarning("搜尋貨單結果", "請輸入完整貨單!")
-            print("wrong order length")
+            print("search for wrong order length")
             self.order_entry.delete(0, 'end')
             return
+        
         order_number = self.search_entry.get()
         self.search_entry.delete(0, 'end')
+        result = self.database.search_order(order_number)
         
-        # try:
-        result_id = self.database.search_order(order_number)
-        print(result_id)
-        # except Exception as e:
-        #     print(f"Error in main -> search_order: {e}")
-        #     return
-        
-        if result_id:
-            if result_id[1] == "unrecorded":
+        if result:
+            if result[5] == "unrecorded":
                 self.printed_order_table.selection_remove(self.printed_order_table.selection())
                 for child in self.printed_order_table.get_children():
                     if order_number in self.printed_order_table.item(child)['values'][2]:
-                        print(f"find {self.printed_order_table.item(child)['values'][2]} within treeview, id: {result_id[0]}")
+                        print(f"find {self.printed_order_table.item(child)['values'][2]} within treeview, id: {result[0]}")
                         self.printed_order_table.selection_set(child)
-                        messagebox.showinfo("搜尋貨單結果", f"貨單編號: {order_number}\nID: {result_id[0]}\n狀態: {self.printed_order_table.item(child)['values'][3]}\n儲存位置: {self.printed_order_table.item(child)['values'][4]}")
+                        messagebox.showinfo("搜尋貨單結果", f"貨單編號: {order_number}\nID: {result[0]}\n狀態: {result[3]}\n儲存位置: {result[4]}")
                         return
             else:
-                messagebox.showwarning("搜尋貨單結果", "資料庫中有這筆貨單，但不是在本次應用程式執行後紀錄，因此無法顯示在下方表格!")
+                messagebox.showwarning("搜尋貨單結果", "資料庫中有紀錄這筆貨單，但不是在本次應用程式執行後紀錄，因此不會顯示在下方表格!")
+                print(f"search for {order_number} already exist, but is recorded")
         else:
             messagebox.showwarning("搜尋貨單結果", "搜尋的貨單不存在!")
+            print(f"search for {order_number} result doesn't exist")
         
     def btn_delete_items(self):
-        if len(self.printed_order_table.selection()) > 1:
-                messagebox.showwarning("刪除貨單警告", "一次只能刪除一筆貨單，請只選擇一筆刪除!")
+        #if search entry is empty
+        if not self.search_entry.get():
+            #if trere was selected row in treeview
+            if self.printed_order_table.selection():
+                print('delete selected row using btn')
+                if len(self.printed_order_table.selection()) > 1:
+                    messagebox.showwarning("刪除貨單警告", "一次只能刪除一筆貨單，請只選擇一筆刪除!")
+                    return
+                
+                if messagebox.askokcancel("刪除貨單", f"確定要刪除 {self.printed_order_table.item(self.printed_order_table.selection())['values'][2]} ? (刪除後不可復原)"):
+                    print(f"delete {self.printed_order_table.item(self.printed_order_table.selection())['values'][2]}")
+                    if self.printed_order_table.item(self.printed_order_table.selection())['values'][3] == "成功":
+                        self.success_order -= 1
+                    self.database.delete_data(self.printed_order_table.item(self.printed_order_table.selection())['values'][2])
+                    self.total_order -= 1
+                    self.update(self.view_status_enrty.get())
+                    return
+            else:
+                messagebox.showwarning("刪除貨單結果", "老哥，先輸入再刪除好嗎")
+                print("empty search entry")
                 return
         
-        print(f"delete {self.printed_order_table.item(self.printed_order_table.selection())['values'][2]}")
-        self.database.delete_data(self.printed_order_table.item(self.printed_order_table.selection())['values'][2])
-        self.update(self.view_status_enrty.get())
+        if len(self.search_entry.get()) != 10:
+            messagebox.showwarning("刪除貨單結果", "請輸入完整貨單!")
+            print("search for wrong order length")
+            self.order_entry.delete(0, 'end')
+            return
+        
+        # delete order from search entry
+        if messagebox.askokcancel("刪除貨單", f"確定要刪除 {self.search_entry.get()} ? (刪除後不可復原)"):
+            print(f"delete {self.search_entry.get()} using btn")
+            result = self.database.search_order(self.search_entry.get())
+            if result:
+                self.database.delete_data(self.search_entry.get())
+                self.search_entry.delete(0, 'end')
+                if result[3] == 'success':
+                    self.success_order -= 1
+                self.total_order -= 1
+                self.update(self.view_status_enrty.get())
+            else:
+                messagebox.showwarning("刪除貨單結果", "欲刪除的貨單不存在!")
+                print("the order trying to delete doesn't exist")
         
     def printToprinter(self):
         def print_cancel_close(_status:str, order):

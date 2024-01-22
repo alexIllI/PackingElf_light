@@ -26,7 +26,6 @@ class DataBase():
             self.connection.commit()
         except Exception as e:
             print(f"Error in db_operation -> check (yesterday): {e}")
-            return
         
         try:
             update_query = f"UPDATE {today} SET record = 'recorded' WHERE record = 'unrecorded'"
@@ -34,7 +33,6 @@ class DataBase():
             self.connection.commit()
         except Exception as e:
             print(f"Error in db_operation -> check (today): {e}")
-            return
     
         
     def insert_data(self, table_id:int, time:str, order_number:str, status:str, save_status:str):
@@ -56,7 +54,7 @@ class DataBase():
             result = self.cursor.fetchone()
             print(result)
             if result:
-                return (result[0], result[5])
+                return result
             else:
                 return None  # Return None if the order is not found
         except Exception as e:
@@ -65,19 +63,13 @@ class DataBase():
     
     def fetch_all_unrecorded(self, status):
         if status == "all":
-            try:
-                select_unrecorded_data = f"SELECT * FROM {self.db_name} WHERE record = 'unrecorded'"
-                self.cursor.execute(select_unrecorded_data)
-                return self.cursor.fetchall()
-            except:
-                return []
-            
-        try:
-            select_unrecorded_data = f"SELECT * FROM {self.db_name} WHERE record = 'unrecorded' AND status = {status}"
+            select_unrecorded_data = f"SELECT * FROM {self.db_name} WHERE record = 'unrecorded'"
             self.cursor.execute(select_unrecorded_data)
             return self.cursor.fetchall()
-        except:
-            return []
+        else: 
+            select_unrecorded_data = f"SELECT * FROM {self.db_name} WHERE record = 'unrecorded' AND status = '{status}'"
+            self.cursor.execute(select_unrecorded_data)
+            return self.cursor.fetchall()
         
     def fetch_last_row(self):
         try:
