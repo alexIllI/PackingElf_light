@@ -1,12 +1,10 @@
 from operation.autoweb import MyAcg, ReturnType
-from operation.database_operation import DataBase
+from operation.database_operation import DataBase, DBreturnType
 
 import customtkinter as ctk
-import tkinter
 from tkinter import ttk
-from CTkTable import CTkTable
 from tkinter import messagebox
-from PIL import Image, ImageTk
+from PIL import Image
 
 from datetime import datetime, timedelta
 from configparser import ConfigParser
@@ -17,8 +15,8 @@ class App(ctk.CTk):
         
         #====================== Operation =========================
         self.driver = MyAcg()
-        self.database = DataBase(datetime.now().strftime('Printed_Order_%Y_%m_%d'), 'operation\\data.db')
-        self.database.check(datetime.now().strftime('Printed_Order_%Y_%m_%d'), (datetime.now()-timedelta(days=1)).strftime('Printed_Order_%Y_%m_%d'))
+        self.database = DataBase(datetime.now().strftime('Printed_Order_%Y_%m_%d'), 'operation\\data.db', 'save')
+        self.database.check_previous_records(datetime.now().strftime('Printed_Order_%Y_%m_%d'), (datetime.now()-timedelta(days=1)).strftime('Printed_Order_%Y_%m_%d'))
         
         self.total_order = 0
         self.success_order = 0
@@ -52,6 +50,9 @@ class App(ctk.CTk):
     def on_closing(self):
         if messagebox.askokcancel("退出包貨小精靈", "確定要退出? (會自動匯出未登記的貨單)"):
             self.driver.shut_down()
+            close_result = self.database.close_database()
+            if close_result == DBreturnType.CLOSE_AND_SAVE_ERROR:
+                messagebox.showwarning("匯出貨單時發生錯誤", "匯出貨單時發生錯誤, 包貨紀錄將不會匯出至excel!\n(下次啟動應用程式時將會嘗試匯出)")
             print("close app")
             self.destroy()
         
@@ -130,7 +131,6 @@ class PrintOrder(ctk.CTkFrame):
         
         # hotkey binding
         self.order_entry.bind('<Return>', lambda event: self.printToprinter())
-        # self.order_entry.bind('<Control-8>', lambda event: self.order_combobox.current(0))
 
         ctk.CTkButton(master=prnit_order_container, width=100, height = 40, text="列印", font=("Iansui", 20), text_color=parent.dark0_color, 
                                           fg_color=parent.theme_color, hover_color=parent.theme_color_dark, command=self.printToprinter).pack(anchor="ne", padx=(40, 0), pady=15, side="left")
@@ -282,7 +282,10 @@ class PrintOrder(ctk.CTkFrame):
         self.search_entry.delete(0, 'end')
         result = self.database.search_order(order_number)
         
-        if result:
+        if result == DBreturnType.ORDER_NOT_FOUND:
+            messagebox.showwarning("搜尋貨單結果", "搜尋的貨單不存在!")
+            print(f"search for {order_number} result doesn't exist")
+        else:
             if result[5] == "unrecorded":
                 self.printed_order_table.selection_remove(self.printed_order_table.selection())
                 for child in self.printed_order_table.get_children():
@@ -294,9 +297,6 @@ class PrintOrder(ctk.CTkFrame):
             else:
                 messagebox.showwarning("搜尋貨單結果", "資料庫中有紀錄這筆貨單，但不是在本次應用程式執行後紀錄，因此不會顯示在下方表格!")
                 print(f"search for {order_number} already exist, but is recorded")
-        else:
-            messagebox.showwarning("搜尋貨單結果", "搜尋的貨單不存在!")
-            print(f"search for {order_number} result doesn't exist")
         
     def btn_delete_items(self):
         #if search entry is empty
@@ -331,16 +331,16 @@ class PrintOrder(ctk.CTkFrame):
         if messagebox.askokcancel("刪除貨單", f"確定要刪除 {self.search_entry.get()} ? (刪除後不可復原)"):
             print(f"delete {self.search_entry.get()} using btn")
             result = self.database.search_order(self.search_entry.get())
-            if result:
+            if result == DBreturnType.ORDER_NOT_FOUND:
+                messagebox.showwarning("刪除貨單結果", "欲刪除的貨單不存在!")
+                print("the order trying to delete doesn't exist")
+            else:
                 self.database.delete_data(self.search_entry.get())
                 self.search_entry.delete(0, 'end')
                 if result[3] == 'success':
                     self.success_order -= 1
                 self.total_order -= 1
                 self.update(self.view_status_enrty.get())
-            else:
-                messagebox.showwarning("刪除貨單結果", "欲刪除的貨單不存在!")
-                print("the order trying to delete doesn't exist")
         
     def printToprinter(self):
         def print_cancel_close(_status:str, order):
