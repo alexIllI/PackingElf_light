@@ -5,4 +5,5 @@ accounts.bin
 dark_theme_layout.png
 operation\data.db
 \save
-operation\__pycache__
+operation/__pycache__
+operation/data.db
