@@ -155,7 +155,6 @@ class MyAcg():
             no_order_wait.until(EC.presence_of_element_located((By.XPATH, '//*[@id="wrap"]/div[2]/div/div[2]/div/span[1]')))
             no_order_text = no_order_wait.text
             if no_order_text == "您沒有訂單，趕快到買動漫逛逛吧！":
-                print("11111111")
                 return ReturnType.ORDER_NOT_FOUND
         except Exception as e:
             print(f"Error in autoweb -> check whether order exist: {e}")
