@@ -13,14 +13,25 @@ class App(ctk.CTk):
     def __init__(self):
         super().__init__()
         
-        #====================== Operation =========================
-        self.driver = MyAcg()
-        self.database = DataBase(datetime.now().strftime('Printed_Order_%Y_%m_%d'), 'operation\\data.db', 'save')
-        self.database.check_previous_records(datetime.now().strftime('Printed_Order_%Y_%m_%d'), (datetime.now()-timedelta(days=1)).strftime('Printed_Order_%Y_%m_%d'))
-        
         self.total_order = 0
         self.success_order = 0
         self.current_id = 0
+        self.current_time_name = datetime.now().strftime('Printed_Order_%Y_%m_%d')
+        
+        #====================== Operation =========================
+        self.driver = MyAcg()
+        self.database = DataBase(self.current_time_name, 'operation\\data.db', 'save')
+        while True:
+            check_result = self.database.check_previous_records(self.current_time_name, (datetime.now()-timedelta(days=1)).strftime('Printed_Order_%Y_%m_%d'))
+            if check_result == DBreturnType.SUCCESS:
+                break
+            elif check_result == DBreturnType.PERMISSION_ERROR:
+                print("excel file is opend, should be closed while checking previous records")
+                messagebox.showwarning("匯出貨單錯誤", f"Excel在開啟時無法匯出, 請關閉紀錄貨單的Excel: {self.current_time_name}.xlsx 後, 再按下確定")
+            elif check_result == DBreturnType.EXPORT_UNRECORDED_ERROR:
+                print("excel unrecord data error")
+                messagebox.showwarning("匯出貨單錯誤", "發生錯誤，檢測到有未紀錄的貨單，但無法匯出")
+                break
         
         #====================== Config ===============================
         config = ConfigParser()
@@ -48,13 +59,20 @@ class App(ctk.CTk):
         self.Page_printorder = PrintOrder(self)
         
     def on_closing(self):
-        if messagebox.askokcancel("退出包貨小精靈", "確定要退出? (會自動匯出未登記的貨單)"):
+        if messagebox.askokcancel("退出包貨小精靈", "確定要退出? (會自動匯出本次所有貨單)"):
             self.driver.shut_down()
-            close_result = self.database.close_database()
-            if close_result == DBreturnType.CLOSE_AND_SAVE_ERROR:
-                messagebox.showwarning("匯出貨單時發生錯誤", "匯出貨單時發生錯誤, 包貨紀錄將不會匯出至excel!\n(下次啟動應用程式時將會嘗試匯出)")
-            print("close app")
+            while True:
+                close_result = self.database.close_database()
+                if close_result == DBreturnType.CLOSE_AND_SAVE_ERROR:
+                    messagebox.showwarning("匯出貨單時發生錯誤", "匯出貨單時發生錯誤, 包貨紀錄將不會匯出至excel!\n(下次啟動應用程式時將會嘗試匯出)")
+                    break
+                elif close_result == DBreturnType.PERMISSION_ERROR:
+                    messagebox.showwarning("匯出貨單時發生錯誤", "匯出貨單時發生錯誤, 請先將儲存貨單的excel關閉!")
+                elif close_result == DBreturnType.SUCCESS:
+                    break
+            
             self.destroy()
+            print("close app")
         
 class SideBar(ctk.CTkFrame):
     def __init__(self, parent):
@@ -91,6 +109,7 @@ class PrintOrder(ctk.CTkFrame):
         self.total_order = parent.total_order
         self.success_order = parent.success_order
         self.current_id = parent.current_id
+        self.cur_time_name = parent.current_time_name
         self.driver = parent.driver
         self.database = parent.database
         self.cancel_color = parent.cancel_color
@@ -199,22 +218,22 @@ class PrintOrder(ctk.CTkFrame):
         self.printed_order_table.tag_configure('close', background=parent.close_color)
         
         tree_scroll.configure(command=self.printed_order_table.yview)
-        for i in range(10):
-            self.total_order += 1
-            self.success_order += 1
-            self.current_id += 1
-            self.database.insert_data(self.current_id, datetime.now().strftime('%H:%M:%S'), f"PG000{i}", 'success', "-")
-            self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, datetime.now().strftime('%H:%M:%S'), f"PG000{i}", '成功', "-"))
+        # for i in range(10):
+        #     self.total_order += 1
+        #     self.success_order += 1
+        #     self.current_id += 1
+        #     self.database.insert_data(self.current_id, datetime.now().strftime('%H:%M:%S'), f"PG000{i}", 'success', self.cur_time_name)
+        #     self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, datetime.now().strftime('%H:%M:%S'), f"PG000{i}", '成功', self.cur_time_name))
         
-        self.total_order += 1
-        self.current_id += 1
-        self.database.insert_data(self.current_id, datetime.now().strftime('%H:%M:%S'), f"PG000{11}", 'close', "-")
-        self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, datetime.now().strftime('%H:%M:%S'), f"PG000{11}", '關轉', "-"), tags = ("close",))
+        # self.total_order += 1
+        # self.current_id += 1
+        # self.database.insert_data(self.current_id, datetime.now().strftime('%H:%M:%S'), f"PG000{11}", 'close', self.cur_time_name)
+        # self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, datetime.now().strftime('%H:%M:%S'), f"PG000{11}", '關轉', self.cur_time_name), tags = ("close",))
         
-        self.total_order += 1
-        self.current_id += 1
-        self.database.insert_data(self.current_id, datetime.now().strftime('%H:%M:%S'), f"PG000{22}", 'close', "-")
-        self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, datetime.now().strftime('%H:%M:%S'), f"PG000{22}", '關轉', "-"), tags = ("close",))
+        # self.total_order += 1
+        # self.current_id += 1
+        # self.database.insert_data(self.current_id, datetime.now().strftime('%H:%M:%S'), f"PG000{22}", 'close', self.cur_time_name)
+        # self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, datetime.now().strftime('%H:%M:%S'), f"PG000{22}", '關轉', self.cur_time_name), tags = ("close",))
         
         # events
         def item_select(_):
@@ -348,11 +367,12 @@ class PrintOrder(ctk.CTkFrame):
             self.current_id += 1
             self.label_total_order_number.configure(text = f"目前貨單總數: {self.total_order}")
             cur_time = datetime.now().strftime('%H:%M:%S')
-            self.database.insert_data(self.current_id, cur_time, order, _status, "-")
+            self.database.insert_data(self.current_id, cur_time, order, _status, self.cur_time_name)
             if _status == "close":
-                self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, cur_time, order, "關轉", "-"), tags = (_status,))
+                self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, cur_time, order, "關轉", self.cur_time_name), tags = (_status,))
             else:
-                self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, cur_time, order, "取消", "-"), tags = (_status,))
+                self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, cur_time, order, "取消", self.cur_time_name), tags = (_status,))
+            self.update(self.view_status_enrty.get())
         
         def print_success(order):
             self.total_order += 1
@@ -361,8 +381,9 @@ class PrintOrder(ctk.CTkFrame):
             self.label_total_order_number.configure(text = f"目前貨單總數: {self.total_order}")
             self.label_success_order_number.configure(text = f"成功列印貨單總數: {self.success_order}")
             cur_time = datetime.now().strftime('%H:%M:%S')
-            self.database.insert_data(self.current_id, cur_time, order, 'success', "-")
-            self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, cur_time, order, '成功', "-"))
+            self.database.insert_data(self.current_id, cur_time, order, 'success', self.cur_time_name)
+            self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, cur_time, order, '成功', self.cur_time_name))
+            self.update(self.view_status_enrty.get())
         
         if not self.order_combobox.get():
             messagebox.showwarning("沒有選擇輸入前綴", "請選擇貨單PG後數字!")
@@ -384,15 +405,19 @@ class PrintOrder(ctk.CTkFrame):
         current_order = f"PG{self.order_combobox.get()}{self.order_entry.get()}"
         self.order_entry.delete(0, 'end')
         result = self.driver.printer(current_order)
-          
-        if result == ReturnType.REPEAT:
-            messagebox.showwarning("貨單後號碼錯誤", "出貨單重複!如果想重印這一單，請先將下方同樣貨單編號的紀錄刪除")
-            print("repeat")
-            
-        elif result == ReturnType.OPEN_FILE_ERROR:
-            print("openfile error")
         
-        elif result == ReturnType.MULTIPLE_TAB:
+        check_repeat_result =  self.database.search_order(current_order)
+        if check_repeat_result == DBreturnType.ORDER_NOT_FOUND:
+            pass
+        elif check_repeat_result[5] == "unrecorded":
+            messagebox.showwarning("貨單後號碼錯誤", "出貨單重複!如果想重印這一單, 請先將下方同樣貨單編號的紀錄刪除")
+            print(f"repeat unrecorded order: {current_order}")
+            
+        elif check_repeat_result[5] == "recorded":
+            messagebox.showwarning("貨單後號碼錯誤", f"出貨單重複!在 {check_repeat_result[1]} 時曾經列印過該出貨單, 並記錄在Excel: {check_repeat_result[4]} 中，請檢查後再嘗試列印!")
+            print(f"repeat recorded order: {current_order}")
+        
+        if result == ReturnType.MULTIPLE_TAB:
             messagebox.showwarning("網頁自動化錯誤", "請開啟瀏覽器將買動漫以外的分頁關閉!")
             print("meltiple tab detected")
             

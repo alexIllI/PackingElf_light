@@ -15,7 +15,6 @@ from enum import Enum
 class ReturnType(Enum):
     REPEAT = "REPEAT"
     MULTIPLE_TAB = "MULTIPLE_TAB"
-    OPEN_FILE_ERROR = "OPEN_FILE_ERROR"
     POPUP_UNSOLVED = "POPUP_UNSOLVED"
     ALREADY_FINISH = "ALREADY_FINISH"
     ORDER_NOT_FOUND = "ORDER_NOT_FOUND"
@@ -54,7 +53,6 @@ class MyAcg():
     def __init__(self):
         
         #============== Variables ==============
-        self.save_path = 'printed.txt'
         self.last = ""
         
         #============== Account ==============
@@ -122,14 +120,13 @@ class MyAcg():
     #find search bar and search
     def printer(self, order):
         #check if enter the repeat order
-        try:
-            with open(self.save_path, 'a+') as file:
-                for line in file:
-                    line_text = line.strip()
-                    if line_text == order:
-                        return ReturnType.REPEAT
-        except:
-            return ReturnType.OPEN_FILE_ERROR
+        
+        #============================================================================
+        
+        
+        
+        
+        #============================================================================
         
         if len(self.driver.window_handles) > 1:
             return ReturnType.MULTIPLE_TAB
