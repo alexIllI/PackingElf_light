@@ -218,6 +218,8 @@ class PrintOrder(ctk.CTkFrame):
         self.printed_order_table.tag_configure('close', background=parent.close_color)
         
         tree_scroll.configure(command=self.printed_order_table.yview)
+        
+        #======================================================== TEST ========================================================
         # for i in range(10):
         #     self.total_order += 1
         #     self.success_order += 1
@@ -234,6 +236,7 @@ class PrintOrder(ctk.CTkFrame):
         # self.current_id += 1
         # self.database.insert_data(self.current_id, datetime.now().strftime('%H:%M:%S'), f"PG000{22}", 'close', self.cur_time_name)
         # self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, datetime.now().strftime('%H:%M:%S'), f"PG000{22}", '關轉', self.cur_time_name), tags = ("close",))
+        #======================================================== TEST ========================================================
         
         # events
         def item_select(_):
@@ -404,18 +407,25 @@ class PrintOrder(ctk.CTkFrame):
         
         current_order = f"PG{self.order_combobox.get()}{self.order_entry.get()}"
         self.order_entry.delete(0, 'end')
-        result = self.driver.printer(current_order)
         
+        #check if it is repeated order
         check_repeat_result =  self.database.search_order(current_order)
         if check_repeat_result == DBreturnType.ORDER_NOT_FOUND:
             pass
         elif check_repeat_result[5] == "unrecorded":
             messagebox.showwarning("貨單後號碼錯誤", "出貨單重複!如果想重印這一單, 請先將下方同樣貨單編號的紀錄刪除")
             print(f"repeat unrecorded order: {current_order}")
-            
+            return
         elif check_repeat_result[5] == "recorded":
-            messagebox.showwarning("貨單後號碼錯誤", f"出貨單重複!在 {check_repeat_result[1]} 時曾經列印過該出貨單, 並記錄在Excel: {check_repeat_result[4]} 中，請檢查後再嘗試列印!")
-            print(f"repeat recorded order: {current_order}")
+            result_delete_previous_record = messagebox.askretrycancel("貨單後號碼錯誤", f"出貨單重複!在 {check_repeat_result[1]} 時曾經列印過該出貨單, 並記錄在Excel: {check_repeat_result[4]} 中。若希望刪除資料庫中該紀錄(需要刪除才能列印, 但不會刪除在Excel的紀錄), 請選擇'重試', 若希望繼續, 請按'取消'")
+            if result_delete_previous_record:
+                self.database.delete_data(current_order)
+            else:
+                print(f"repeat recorded order: {current_order}")
+                return
+            
+        #print to printer using autoweb
+        result = self.driver.printer(current_order)
         
         if result == ReturnType.MULTIPLE_TAB:
             messagebox.showwarning("網頁自動化錯誤", "請開啟瀏覽器將買動漫以外的分頁關閉!")

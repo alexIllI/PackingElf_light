@@ -13,7 +13,6 @@ from enum import Enum
 
 #====================== Enum ===============================
 class ReturnType(Enum):
-    REPEAT = "REPEAT"
     MULTIPLE_TAB = "MULTIPLE_TAB"
     POPUP_UNSOLVED = "POPUP_UNSOLVED"
     ALREADY_FINISH = "ALREADY_FINISH"
@@ -119,14 +118,6 @@ class MyAcg():
 
     #find search bar and search
     def printer(self, order):
-        #check if enter the repeat order
-        
-        #============================================================================
-        
-        
-        
-        
-        #============================================================================
         
         if len(self.driver.window_handles) > 1:
             return ReturnType.MULTIPLE_TAB
@@ -144,27 +135,27 @@ class MyAcg():
         try:
             self.driver.find_element(By.XPATH, '//*[@id="wrap"]/div[2]/div[2]/div[1]/table/tbody/tr[1]/td[1]/div[1]')
             return ReturnType.ALREADY_FINISH
-        except:
-            pass
+        except Exception as e:
+            print(f"Error in autoweb -> check whether order already finished: {e}")
         
         #======================================= TEST ====================================================
+        # try:
+        #     no_order = self.driver.find_element(By.XPATH, '//*[@id="wrap"]/div[2]/div/div[2]/div/span[1]')
+        #     no_order_text = no_order.text
+        #     if no_order_text == "您沒有訂單，趕快到買動漫逛逛吧！":
+        #         return ReturnType.ORDER_CANCELED
+        # except:
+        #     pass
+        #=================================================================================================
+        
         #check if the order exist
         try:
             no_order = self.driver.find_element(By.XPATH, '//*[@id="wrap"]/div[2]/div/div[2]/div/span[1]')
             no_order_text = no_order.text
             if no_order_text == "您沒有訂單，趕快到買動漫逛逛吧！":
-                return ReturnType.ORDER_CANCELED
-        except:
-            pass
-        #=================================================================================================
-        
-        try:
-            no_order = self.driver.find_element(By.XPATH, '//*[@id="wrap"]/div[2]/div/div[2]/div/span[1]')
-            no_order_text = no_order.text
-            if no_order_text == "您沒有訂單，趕快到買動漫逛逛吧！":
                 return ReturnType.ORDER_NOT_FOUND
-        except:
-            pass
+        except Exception as e:
+            print(f"Error in autoweb -> check whether order exist: {e}")
         
         #等待直到check box出現並勾選
         try:
