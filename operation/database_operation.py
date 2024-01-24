@@ -56,29 +56,33 @@ class DataBase():
             return DBreturnType.EXPORT_UNRECORDED_ERROR
 
     def check_previous_records(self, today: str, yesterday: str):
-        try:
-            # Check if there are any unrecorded orders for yesterday
-            select_query_yesterday = f"SELECT COUNT(*) FROM {yesterday} WHERE record = ?"
-            unrecorded_count_yesterday = self.cursor.execute(select_query_yesterday, ('unrecorded',)).fetchone()[0]
-            print(f"find {unrecorded_count_yesterday} unrecorded data in table '{yesterday}'")
+        #first check if 'yesterday' table exist
+        self.cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{yesterday}'")
+        result = self.cursor.fetchone()
+        if result:
+            try:
+                # Check if there are any unrecorded orders for yesterday
+                select_query_yesterday = f"SELECT COUNT(*) FROM {yesterday} WHERE record = ?"
+                unrecorded_count_yesterday = self.cursor.execute(select_query_yesterday, ('unrecorded',)).fetchone()[0]
+                print(f"find {unrecorded_count_yesterday} unrecorded data in table '{yesterday}'")
 
-            if unrecorded_count_yesterday > 0:
-                result = self.export_unrecorded_to_excel(yesterday)
-                if result == DBreturnType.PERMISSION_ERROR:
-                    print(f"'check_precious_record' using 'export_unrecorded_to_excel' in table '{yesterday}' get permission error")
-                    return DBreturnType.PERMISSION_ERROR
-                elif result == DBreturnType.EXPORT_UNRECORDED_ERROR:
-                    print(f"'check_precious_record' using 'export_unrecorded_to_excel' in table '{yesterday}' get export unrecorded error")
-                    return DBreturnType.EXPORT_UNRECORDED_ERROR
+                if unrecorded_count_yesterday > 0:
+                    result = self.export_unrecorded_to_excel(yesterday)
+                    if result == DBreturnType.PERMISSION_ERROR:
+                        print(f"'check_precious_record' using 'export_unrecorded_to_excel' in table '{yesterday}' get permission error")
+                        return DBreturnType.PERMISSION_ERROR
+                    elif result == DBreturnType.EXPORT_UNRECORDED_ERROR:
+                        print(f"'check_precious_record' using 'export_unrecorded_to_excel' in table '{yesterday}' get export unrecorded error")
+                        return DBreturnType.EXPORT_UNRECORDED_ERROR
 
-                update_query_yesterday = f"UPDATE {yesterday} SET record = ? WHERE record = ?"
-                self.cursor.execute(update_query_yesterday, ('recorded', 'unrecorded'))
-                self.connection.commit()
-                print(f"successfully update all unrecorded data in table: {yesterday}")
-                
-        except Exception as e:
-            print(f"Error in db_operation -> check_previous_records (yesterday): {e}")
-            return DBreturnType.CHECK_YESTERDAY_ERROR
+                    update_query_yesterday = f"UPDATE {yesterday} SET record = ? WHERE record = ?"
+                    self.cursor.execute(update_query_yesterday, ('recorded', 'unrecorded'))
+                    self.connection.commit()
+                    print(f"successfully update all unrecorded data in table: {yesterday}")
+                    
+            except Exception as e:
+                print(f"Error in db_operation -> check_previous_records (yesterday): {e}")
+                return DBreturnType.CHECK_YESTERDAY_ERROR
 
         try:
             select_query_today = f"SELECT COUNT(*) FROM {today} WHERE record = ?"

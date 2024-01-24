@@ -443,6 +443,9 @@ class PrintOrder(ctk.CTkFrame):
             messagebox.showwarning("貨單後號碼錯誤", "沒有這一單!")
             print("order not found")
             
+        elif result == ReturnType.ORDER_NOT_FOUND_ERROR:
+            print("order not found raises error")
+            
         elif result == ReturnType.CHECKBOX_NOT_FOUND:
             messagebox.showwarning("網頁自動化錯誤", "找不到checkbox,可能沒有這一單,自己開買動漫看一下")
             print("check box not found")
