@@ -6,3 +6,8 @@ operation\data.db
 \save
 operation/__pycache__
 operation/data.db
+requirements_conda.txt
+requirements.txt
+\build
+\dist
+PackingElf.spec

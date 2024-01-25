@@ -6,14 +6,26 @@ from tkinter import ttk
 from tkinter import messagebox
 from PIL import Image
 import pyglet
+import sys
+import os
 
 from datetime import datetime, timedelta
 from configparser import ConfigParser
 
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
+
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
-        pyglet.font.add_file("font\\Iansui-Regular.ttf")
+        pyglet.font.add_file(resource_path("font\\Iansui-Regular.ttf"))
         self.total_order = 0
         self.success_order = 0
         self.current_id = 0
@@ -36,7 +48,7 @@ class App(ctk.CTk):
         
         #====================== Config ===============================
         config = ConfigParser()
-        config.read("config.ini")
+        config.read(resource_path("config.ini"))
         self.theme_color_dark = config["ThemeColor_dark"]["theme_color_dark"]
         self.theme_color = config["ThemeColor_dark"]["theme_color"]
         self.dark0_color = config["ThemeColor_dark"]["dark0"]
@@ -51,7 +63,7 @@ class App(ctk.CTk):
         self.geometry("1200x800")
         self.resizable(0,0)
         self.title("包貨小精靈")
-        self.iconbitmap("images\icon.ico")
+        self.iconbitmap(resource_path("images\icon.ico"))
         
         ctk.set_appearance_mode("dark")
         
@@ -82,22 +94,22 @@ class SideBar(ctk.CTkFrame):
         self.sidebar_frame.pack_propagate(0)
         self.sidebar_frame.pack(fill="y", anchor="w", side="left")
         
-        logo_img_data = Image.open("images\icon_meridian_white.png")
+        logo_img_data = Image.open(resource_path("images\icon_meridian_white.png"))
         logo_img = ctk.CTkImage(dark_image=logo_img_data, light_image=logo_img_data, size=(180, 186))
         ctk.CTkLabel(master=self.sidebar_frame, text="", image=logo_img).pack(pady=(60, 0), anchor="center")
         
-        package_img_data = Image.open("images\printer.png")
+        package_img_data = Image.open(resource_path("images\printer.png"))
         package_img = ctk.CTkImage(dark_image=package_img_data, light_image=package_img_data)
 
         ctk.CTkButton(master=self.sidebar_frame, width=250, image=package_img, text="列印出貨單", fg_color=parent.dark1_color, font=("Iansui", 24), 
                 hover_color=parent.dark3_color, anchor="n").pack(anchor="center", ipady=5, pady=(180, 0))
 
-        list_img_data = Image.open("images\list_icon.png")
+        list_img_data = Image.open(resource_path("images\list_icon.png"))
         list_img = ctk.CTkImage(dark_image=list_img_data, light_image=list_img_data)
         ctk.CTkButton(master=self.sidebar_frame, width=250, image=list_img, text="儲存管理", fg_color="transparent", font=("Iansui", 24), 
                 hover_color=parent.dark3_color, anchor="n").pack(anchor="center", ipady=5, pady=(16, 0))
 
-        settings_img_data = Image.open("images\settings_icon.png")
+        settings_img_data = Image.open(resource_path("images\settings_icon.png"))
         settings_img = ctk.CTkImage(dark_image=settings_img_data, light_image=settings_img_data)
         ctk.CTkButton(master=self.sidebar_frame, width=250, image=settings_img, text="設定", fg_color="transparent", font=("Iansui", 24), 
                 hover_color=parent.dark3_color, anchor="n").pack(anchor="center", ipady=5, pady=(16, 0),)
