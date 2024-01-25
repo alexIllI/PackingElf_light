@@ -11,3 +11,4 @@ requirements.txt
 \build
 \dist
 PackingElf.spec
+\packingelf_light

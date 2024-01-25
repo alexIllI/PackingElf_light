@@ -25,26 +25,29 @@ def resource_path(relative_path):
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
-        pyglet.font.add_file(resource_path("font\\Iansui-Regular.ttf"))
+        try:
+            pyglet.font.add_file(resource_path("font\\Iansui-Regular.ttf"))
+        except:
+            print("add font error")
         self.total_order = 0
         self.success_order = 0
         self.current_id = 0
         self.current_time_name = datetime.now().strftime('Printed_Order_%Y_%m_%d')
         
         #====================== Operation =========================
-        self.driver = MyAcg()
-        self.database = DataBase(self.current_time_name, 'operation\\data.db', 'save')
-        while True:
-            check_result = self.database.check_previous_records(self.current_time_name, (datetime.now()-timedelta(days=1)).strftime('Printed_Order_%Y_%m_%d'))
-            if check_result == DBreturnType.SUCCESS:
-                break
-            elif check_result == DBreturnType.PERMISSION_ERROR:
-                print("excel file is opend, should be closed while checking previous records")
-                messagebox.showwarning("匯出貨單錯誤", f"Excel在開啟時無法匯出, 請關閉紀錄貨單的Excel: {self.current_time_name}.xlsx 後, 再按下確定")
-            elif check_result == DBreturnType.EXPORT_UNRECORDED_ERROR:
-                print("excel unrecord data error")
-                messagebox.showwarning("匯出貨單錯誤", "發生錯誤，檢測到有未紀錄的貨單，但無法匯出")
-                break
+        # self.driver = MyAcg()
+        # self.database = DataBase(self.current_time_name, 'operation\\data.db', 'save')
+        # while True:
+        #     check_result = self.database.check_previous_records(self.current_time_name, (datetime.now()-timedelta(days=1)).strftime('Printed_Order_%Y_%m_%d'))
+        #     if check_result == DBreturnType.SUCCESS:
+        #         break
+        #     elif check_result == DBreturnType.PERMISSION_ERROR:
+        #         print("excel file is opend, should be closed while checking previous records")
+        #         messagebox.showwarning("匯出貨單錯誤", f"Excel在開啟時無法匯出, 請關閉紀錄貨單的Excel: {self.current_time_name}.xlsx 後, 再按下確定")
+        #     elif check_result == DBreturnType.EXPORT_UNRECORDED_ERROR:
+        #         print("excel unrecord data error")
+        #         messagebox.showwarning("匯出貨單錯誤", "發生錯誤，檢測到有未紀錄的貨單，但無法匯出")
+        #         break
         
         #====================== Config ===============================
         config = ConfigParser()
@@ -60,8 +63,8 @@ class App(ctk.CTk):
         self.cancel_color = config["ThemeColor_dark"]["cancel"]
         self.close_color = config["ThemeColor_dark"]["close"]
         
-        self.geometry("1200x800")
-        self.resizable(0,0)
+        self.geometry("900x600")
+        # self.resizable(0,0)
         self.title("包貨小精靈")
         self.iconbitmap(resource_path("images\icon.ico"))
         
@@ -73,16 +76,16 @@ class App(ctk.CTk):
         
     def on_closing(self):
         if messagebox.askokcancel("退出包貨小精靈", "確定要退出? (會自動匯出本次所有貨單)"):
-            self.driver.shut_down()
-            while True:
-                close_result = self.database.close_database()
-                if close_result == DBreturnType.CLOSE_AND_SAVE_ERROR:
-                    messagebox.showwarning("匯出貨單時發生錯誤", "匯出貨單時發生錯誤, 包貨紀錄將不會匯出至excel!\n(下次啟動應用程式時將會嘗試匯出)")
-                    break
-                elif close_result == DBreturnType.PERMISSION_ERROR:
-                    messagebox.showwarning("匯出貨單時發生錯誤", "匯出貨單時發生錯誤, 請先將儲存貨單的excel關閉!")
-                elif close_result == DBreturnType.SUCCESS:
-                    break
+            # self.driver.shut_down()
+            # while True:
+            #     close_result = self.database.close_database()
+            #     if close_result == DBreturnType.CLOSE_AND_SAVE_ERROR:
+            #         messagebox.showwarning("匯出貨單時發生錯誤", "匯出貨單時發生錯誤, 包貨紀錄將不會匯出至excel!\n(下次啟動應用程式時將會嘗試匯出)")
+            #         break
+            #     elif close_result == DBreturnType.PERMISSION_ERROR:
+            #         messagebox.showwarning("匯出貨單時發生錯誤", "匯出貨單時發生錯誤, 請先將儲存貨單的excel關閉!")
+            #     elif close_result == DBreturnType.SUCCESS:
+            #         break
             
             self.destroy()
             print("close app")
@@ -90,29 +93,29 @@ class App(ctk.CTk):
 class SideBar(ctk.CTkFrame):
     def __init__(self, parent):
         super().__init__(parent)
-        self.sidebar_frame = ctk.CTkFrame(master=parent, fg_color=parent.dark2_color,  width=300, height=800, corner_radius=0)
+        self.sidebar_frame = ctk.CTkFrame(master=parent, fg_color=parent.dark2_color,  width=225, height=600, corner_radius=0)
         self.sidebar_frame.pack_propagate(0)
         self.sidebar_frame.pack(fill="y", anchor="w", side="left")
         
         logo_img_data = Image.open(resource_path("images\icon_meridian_white.png"))
-        logo_img = ctk.CTkImage(dark_image=logo_img_data, light_image=logo_img_data, size=(180, 186))
+        logo_img = ctk.CTkImage(dark_image=logo_img_data, light_image=logo_img_data, size=(135, 136.3))
         ctk.CTkLabel(master=self.sidebar_frame, text="", image=logo_img).pack(pady=(60, 0), anchor="center")
         
         package_img_data = Image.open(resource_path("images\printer.png"))
         package_img = ctk.CTkImage(dark_image=package_img_data, light_image=package_img_data)
 
-        ctk.CTkButton(master=self.sidebar_frame, width=250, image=package_img, text="列印出貨單", fg_color=parent.dark1_color, font=("Iansui", 24), 
-                hover_color=parent.dark3_color, anchor="n").pack(anchor="center", ipady=5, pady=(180, 0))
+        ctk.CTkButton(master=self.sidebar_frame, width=200, image=package_img, text="列印出貨單", fg_color=parent.dark1_color, font=("Iansui", 18), 
+                hover_color=parent.dark3_color, anchor="center").pack(anchor="center", ipady=5, pady=(135, 0))
 
         list_img_data = Image.open(resource_path("images\list_icon.png"))
         list_img = ctk.CTkImage(dark_image=list_img_data, light_image=list_img_data)
-        ctk.CTkButton(master=self.sidebar_frame, width=250, image=list_img, text="儲存管理", fg_color="transparent", font=("Iansui", 24), 
-                hover_color=parent.dark3_color, anchor="n").pack(anchor="center", ipady=5, pady=(16, 0))
+        ctk.CTkButton(master=self.sidebar_frame, width=200, image=list_img, text="儲存管理", fg_color="transparent", font=("Iansui", 18), 
+                hover_color=parent.dark3_color, anchor="center").pack(anchor="center", ipady=5, pady=(16, 0))
 
         settings_img_data = Image.open(resource_path("images\settings_icon.png"))
         settings_img = ctk.CTkImage(dark_image=settings_img_data, light_image=settings_img_data)
-        ctk.CTkButton(master=self.sidebar_frame, width=250, image=settings_img, text="設定", fg_color="transparent", font=("Iansui", 24), 
-                hover_color=parent.dark3_color, anchor="n").pack(anchor="center", ipady=5, pady=(16, 0),)
+        ctk.CTkButton(master=self.sidebar_frame, width=200, image=settings_img, text="設定", fg_color="transparent", font=("Iansui", 18), 
+                hover_color=parent.dark3_color, anchor="center").pack(anchor="center", ipady=5, pady=(16, 0),)
 
 class PrintOrder(ctk.CTkFrame):
     def __init__(self, parent):
@@ -123,23 +126,23 @@ class PrintOrder(ctk.CTkFrame):
         self.success_order = parent.success_order
         self.current_id = parent.current_id
         self.cur_time_name = parent.current_time_name
-        self.driver = parent.driver
-        self.database = parent.database
+        # self.driver = parent.driver
+        # self.database = parent.database
         self.cancel_color = parent.cancel_color
         self.close_color = parent.close_color
         
         #=============================== SET UP ======================================
-        main_view = ctk.CTkFrame(master=parent, fg_color=parent.dark0_color,  width=900, height=800, corner_radius=0)
+        main_view = ctk.CTkFrame(master=parent, fg_color=parent.dark0_color,  width=675, height=600, corner_radius=0)
         main_view.pack_propagate(0)
         main_view.pack(side="left")
 
         title_frame = ctk.CTkFrame(master=main_view, fg_color="transparent")
         title_frame.pack(anchor="n", fill="x",  padx=27, pady=(29, 0))
-        ctk.CTkLabel(master=title_frame, text="列印出貨單", font=("Iansui", 36), text_color=parent.theme_color).pack(anchor="nw", side="left")
+        ctk.CTkLabel(master=title_frame, text="列印出貨單", font=("Iansui", 32), text_color=parent.theme_color).pack(anchor="nw", side="left")
         
         #=============================== STORAGE PATH ======================================
 
-        storage_path_container = ctk.CTkFrame(master=main_view, height=50, fg_color="transparent")
+        storage_path_container = ctk.CTkFrame(master=main_view, height=37.5, fg_color="transparent")
         storage_path_container.pack(fill="x", pady=(45, 0), padx=30)
 
         ctk.CTkLabel(master=storage_path_container, text="儲存位置: ", text_color="#fff", font=("Iansui", 24)).pack(side="left", padx=(13, 0), pady=5)
@@ -150,52 +153,52 @@ class PrintOrder(ctk.CTkFrame):
 
         #=============================== PRINTER ORDER ======================================
 
-        prnit_order_container = ctk.CTkFrame(master=main_view, height=50, fg_color="transparent")
+        prnit_order_container = ctk.CTkFrame(master=main_view, height=37.5, fg_color="transparent")
         prnit_order_container.pack(fill="x", pady=(10, 0), padx=30)
 
         ctk.CTkLabel(master=prnit_order_container, text="PG", text_color="#fff", font=("Iansui", 24)).pack(side="left", padx=(13, 0), pady=5)
-        self.order_combobox = ctk.CTkComboBox(master=prnit_order_container, state="readonly", width=140, height = 40, font=("Iansui", 20), values=["018", "019", "020", "021"], button_color=parent.theme_color, border_color=parent.theme_color, 
+        self.order_combobox = ctk.CTkComboBox(master=prnit_order_container, state="readonly", width=105, height = 40, font=("Iansui", 20), values=["018", "019", "020", "021"], button_color=parent.theme_color, border_color=parent.theme_color, 
                     border_width=2, button_hover_color=parent.theme_color_dark, dropdown_hover_color=parent.theme_color_dark, dropdown_fg_color=parent.theme_color, dropdown_text_color=parent.dark0_color)
         self.order_combobox.pack(side="left", padx=(13, 0), pady=15)
         self.order_combobox.set("019")
-        self.order_entry = ctk.CTkEntry(master=prnit_order_container, width=300, height = 40, font=("Iansui", 20), placeholder_text="請輸入貨單後五碼", border_color=parent.theme_color, border_width=2)
+        self.order_entry = ctk.CTkEntry(master=prnit_order_container, width=225, height = 40, font=("Iansui", 20), placeholder_text="請輸入貨單後五碼", border_color=parent.theme_color, border_width=2)
         self.order_entry.pack(side="left", padx=(13, 0), pady=5)
         
         # hotkey binding
         self.order_entry.bind('<Return>', lambda event: self.printToprinter())
 
-        ctk.CTkButton(master=prnit_order_container, width=100, height = 40, text="列印", font=("Iansui", 20), text_color=parent.dark0_color, 
+        ctk.CTkButton(master=prnit_order_container, width=75, height = 40, text="列印", font=("Iansui", 18), text_color=parent.dark0_color, 
                                           fg_color=parent.theme_color, hover_color=parent.theme_color_dark, command=self.printToprinter).pack(anchor="ne", padx=(40, 0), pady=15, side="left")
         
         #=============================== ORDER COUNT ======================================
 
-        counting_container = ctk.CTkFrame(master=main_view, height=80, fg_color="transparent")
+        counting_container = ctk.CTkFrame(master=main_view, height=60, fg_color="transparent")
         counting_container.pack(fill="x", pady=(70, 0), padx=40)
 
-        total_count_metric = ctk.CTkFrame(master=counting_container, fg_color=parent.dark1_color,width=400, height=50)
+        total_count_metric = ctk.CTkFrame(master=counting_container, fg_color=parent.dark1_color,width=300, height=37.5)
         total_count_metric.pack(side="left")
         
-        success_count_metric = ctk.CTkFrame(master=counting_container, fg_color=parent.dark1_color,width=400, height=50)
+        success_count_metric = ctk.CTkFrame(master=counting_container, fg_color=parent.dark1_color,width=300, height=37.5)
         success_count_metric.pack(side="right")
 
-        self.label_total_order_number = ctk.CTkLabel(master=total_count_metric, text="目前貨單總數: 0", text_color="#fff", font=("Iansui", 24))
+        self.label_total_order_number = ctk.CTkLabel(master=total_count_metric, text="目前貨單總數: 0", text_color="#fff", font=("Iansui", 22))
         self.label_total_order_number.pack(side="left", padx=20, pady=5)
         
-        self.label_success_order_number = ctk.CTkLabel(master=success_count_metric, text="成功列印貨單總數: 0", text_color="#fff", font=("Iansui", 24))
+        self.label_success_order_number = ctk.CTkLabel(master=success_count_metric, text="成功列印貨單總數: 0", text_color="#fff", font=("Iansui", 22))
         self.label_success_order_number.pack(side="left", padx=20, pady=5)
         
         #=============================== SEARCH BAR ======================================
 
-        search_container = ctk.CTkFrame(master=main_view, height=50, fg_color="transparent")
+        search_container = ctk.CTkFrame(master=main_view, height=37.5, fg_color="transparent")
         search_container.pack(fill="x", pady=(10, 0), padx=30)
 
-        self.search_entry = ctk.CTkEntry(master=search_container, width=300, height = 40, font=("Iansui", 20), placeholder_text="搜尋貨單", border_color=parent.theme_color, border_width=2)
+        self.search_entry = ctk.CTkEntry(master=search_container, width=225, height = 30, font=("Iansui", 16), placeholder_text="搜尋貨單", border_color=parent.theme_color, border_width=2)
         self.search_entry.pack(side="left", padx=(13, 0), pady=5)
         self.search_entry.bind('<Return>', lambda event: self.search_order())
         
-        ctk.CTkButton(master=search_container, width=100, height = 40, text="搜尋", font=("Iansui", 20), text_color=parent.dark0_color, fg_color=parent.theme_color, hover_color=parent.theme_color_dark, command=self.search_order).pack(anchor="ne", padx=(13, 0), pady=5, side="left")
-        ctk.CTkButton(master=search_container, width=100, height = 40, text="刪除", font=("Iansui", 20), text_color=parent.dark0_color, fg_color=parent.theme_color, hover_color=parent.theme_color_dark, command=self.btn_delete_items).pack(anchor="ne", padx=(13, 0), pady=5, side="left")
-        self.view_status_enrty = ctk.CTkComboBox(master=search_container, state="readonly", width=140, height = 40, font=("Iansui", 20), values=["顯示全部", "成功出貨", "關轉", "取消"], button_color=parent.theme_color, border_color=parent.theme_color, 
+        ctk.CTkButton(master=search_container, width=75, height = 30, text="搜尋", font=("Iansui", 16), text_color=parent.dark0_color, fg_color=parent.theme_color, hover_color=parent.theme_color_dark, command=self.search_order).pack(anchor="ne", padx=(13, 0), pady=5, side="left")
+        ctk.CTkButton(master=search_container, width=75, height = 30, text="刪除", font=("Iansui", 16), text_color=parent.dark0_color, fg_color=parent.theme_color, hover_color=parent.theme_color_dark, command=self.btn_delete_items).pack(anchor="ne", padx=(13, 0), pady=5, side="left")
+        self.view_status_enrty = ctk.CTkComboBox(master=search_container, state="readonly", width=105, height = 30, font=("Iansui", 16), values=["顯示全部", "成功出貨", "關轉", "取消"], button_color=parent.theme_color, border_color=parent.theme_color, 
                     border_width=2, button_hover_color=parent.theme_color_dark, dropdown_hover_color=parent.theme_color_dark, dropdown_fg_color=parent.theme_color, dropdown_text_color=parent.dark0_color, command=self.update)
         self.view_status_enrty.pack(side="right", padx=(13, 0), pady=5)
         self.view_status_enrty.set("顯示全部")
@@ -210,12 +213,12 @@ class PrintOrder(ctk.CTkFrame):
         
         printed_order_table_style = ttk.Style()
         printed_order_table_style.theme_use("clam")
-        printed_order_table_style.configure("Treeview.Heading", font=("Iansui", 25))
-        printed_order_table_style.configure("Treeview", rowheight = 50, font=("Iansui", 20), background="#fff")
+        printed_order_table_style.configure("Treeview.Heading", font=("Arial", 20))
+        printed_order_table_style.configure("Treeview", rowheight = 50, font=("Iansui", 16), background="#fff")
         printed_order_table_style.layout("Treeview", [('Treeview.treearea', {'sticky': 'nswe'})])
         
         self.printed_order_table = ttk.Treeview(table_frame, columns = ('id', 'time', 'order', 'status', 'save_status'), style="Treeview", show = 'headings', yscrollcommand=tree_scroll.set)
-        self.printed_order_table.column("# 1", anchor="center",width=40)
+        self.printed_order_table.column("# 1", anchor="center",width=30)
         self.printed_order_table.column("# 2", anchor="center")
         self.printed_order_table.column("# 3", anchor="center")
         self.printed_order_table.column("# 4", anchor="center")
