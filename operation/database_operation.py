@@ -137,7 +137,7 @@ class DataBase():
             select_order_data = f"SELECT * FROM {self.table_name} WHERE order_number = ?"
             self.cursor.execute(select_order_data, (order,))
             result = self.cursor.fetchone()
-            print(result)
+            print(f"search for order: {order} result: {result}")
             if result:
                 return result
             else:

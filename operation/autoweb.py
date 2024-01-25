@@ -7,9 +7,20 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.service import Service
 
 import os
+import sys
 from subprocess import CREATE_NO_WINDOW
 from configparser import ConfigParser
 from enum import Enum
+
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
 
 #====================== Enum ===============================
 class ReturnType(Enum):
@@ -20,6 +31,7 @@ class ReturnType(Enum):
     ORDER_NOT_FOUND_ERROR = "ORDER_NOT_FOUND_ERROR"
     CHECKBOX_NOT_FOUND = "CHECKBOX_NOT_FOUND"
     CLICKING_CHECKBOX_ERROR = "CLICKING_CHECKBOX_ERROR"
+    CLICKING_PRINT_ORDER_ERROR = "CLICKING_PRINT_ORDER_ERROR"
     ORDER_CANCELED = "ORDER_CANCELED"
     STORE_CLOSED = "STORE_CLOSED"
     SWITCH_TAB_ERROR = "SWITCH_TAB_ERROR"
@@ -30,7 +42,7 @@ class ReturnType(Enum):
 
 #====================== Config ===============================
 config = ConfigParser()
-config.read("config.ini")
+config.read(resource_path("config.ini"))
 
 #====================== Path ===============================
 OUTTER_PATH = os.path.abspath(os.getcwd())
@@ -133,13 +145,36 @@ class MyAcg():
         except:
             return ReturnType.POPUP_UNSOLVED
         
+        #check if the order exist
         try:
-            self.driver.find_element(By.XPATH, '//*[@id="wrap"]/div[2]/div[2]/div[1]/table/tbody/tr[1]/td[1]/div[1]')
-            return ReturnType.ALREADY_FINISH
-        except Exception as e:
-            print(f"Error in autoweb -> check whether order already finished: {e}")
+            no_order_wait = self.driver.find_element(By.XPATH, '//*[@id="wrap"]/div[2]/div/div[2]/div/span[2]/a')
+            if no_order_wait:
+                return ReturnType.ORDER_NOT_FOUND
+        except:
+            pass
         
-        #======================================= TEST ====================================================
+        #check if it's canceled
+        try:
+            self.driver.find_element(By.XPATH, '//*[@id="wrap"]/div[2]/div[2]/div[1]/table/tbody/tr[1]/td[1]/div[1]/div/span[2]')
+            return ReturnType.ORDER_CANCELED
+        except:
+            pass
+        
+        #check if the order already finished
+        try:
+            #locate print order button as indicator of whether it's finished
+            self.driver.find_element(By.XPATH, '//*[@id="wrap"]/div[2]/div[2]/div[1]/table/tbody/tr/td[7]/a[4]')
+        except:
+            return ReturnType.ALREADY_FINISH
+        
+        #check if there is closed tag
+        try:
+            self.driver.find_element(By.XPATH, '//*[@id="wrap"]/div[2]/div[2]/div[1]/table/tbody/tr[1]/td[7]/span')
+            return ReturnType.STORE_CLOSED
+        except:
+            pass
+        
+        #======================================= TEST RETURN ====================================================
         # try:
         #     no_order = self.driver.find_element(By.XPATH, '//*[@id="wrap"]/div[2]/div/div[2]/div/span[1]')
         #     no_order_text = no_order.text
@@ -147,18 +182,9 @@ class MyAcg():
         #         return ReturnType.ORDER_CANCELED
         # except:
         #     pass
-        #=================================================================================================
         
-        #check if the order exist
-        try:
-            no_order_wait = WebDriverWait(self.driver, config["WebOperation"]["longerwaittime"])
-            no_order_wait.until(EC.presence_of_element_located((By.XPATH, '//*[@id="wrap"]/div[2]/div/div[2]/div/span[1]')))
-            no_order_text = no_order_wait.text
-            if no_order_text == "您沒有訂單，趕快到買動漫逛逛吧！":
-                return ReturnType.ORDER_NOT_FOUND
-        except Exception as e:
-            print(f"Error in autoweb -> check whether order exist: {e}")
-            return ReturnType.ORDER_NOT_FOUND_ERROR
+        # return ReturnType.SUCCESS
+        #=================================================================================================
         
         #等待直到check box出現並勾選
         try:
@@ -170,24 +196,30 @@ class MyAcg():
         # use Javascript to click checkbox
         try:
             self.driver.execute_script("arguments[0].click();", checkbox)  
+        except:
+            return ReturnType.CLICKING_CHECKBOX_ERROR
+        
+        #click print order
+        try:
             print_order = self.driver.find_element(By.ID, 'PrintBatch')
             print_order.click()
         except:
-            return ReturnType.CLICKING_CHECKBOX_ERROR
+            return ReturnType.CLICKING_PRINT_ORDER_ERROR
 
         #測試是否有開啟新分頁
         try:
             self.driver.switch_to.window(self.driver.window_handles[1])
         except:
+            #測試是否可以handle pop up
             try:
-                cancel = self.driver.find_element(By.XPATH, '//*[@id="wrap"]/div[2]/div[2]/div[1]/table/tbody/tr[1]/td[1]/div[1]/div/span[2]')
-                element_text = cancel.text
-                if element_text == "取消原因":
-                    return ReturnType.ORDER_CANCELED
-                else:
-                    return ReturnType.STORE_CLOSED
+                alert = self.driver.switch_to.alert
+                print(f"popup alert showing message: {alert.text}")
+                alert.accept()
+                # self.driver.execute_script("switchTo().alert().dismiss();")
+                return ReturnType.STORE_CLOSED
             except:
-                return ReturnType.SWITCH_TAB_ERROR
+                pass
+            return ReturnType.SWITCH_TAB_ERROR
         
         #列印出貨單(找出出貨單元素)
         try:
@@ -211,15 +243,6 @@ class MyAcg():
             return ReturnType.CLOSED_TAB_ERROR
         
         return ReturnType.SUCCESS
-
-    def save(self, order):
-        try:
-            with open(self.save_path, 'a+') as file:
-                file.write(order + '\n')
-                print(f"成功寫入貨單: {order}")
-        except:
-            print("寫入貨單時發生錯誤，檢查一下筆記本裡有沒有存到這筆貨單編號")
-        return
         
     def shut_down(self):
         self.driver.quit()

@@ -35,19 +35,19 @@ class App(ctk.CTk):
         self.current_time_name = datetime.now().strftime('Printed_Order_%Y_%m_%d')
         
         #====================== Operation =========================
-        # self.driver = MyAcg()
-        # self.database = DataBase(self.current_time_name, 'operation\\data.db', 'save')
-        # while True:
-        #     check_result = self.database.check_previous_records(self.current_time_name, (datetime.now()-timedelta(days=1)).strftime('Printed_Order_%Y_%m_%d'))
-        #     if check_result == DBreturnType.SUCCESS:
-        #         break
-        #     elif check_result == DBreturnType.PERMISSION_ERROR:
-        #         print("excel file is opend, should be closed while checking previous records")
-        #         messagebox.showwarning("匯出貨單錯誤", f"Excel在開啟時無法匯出, 請關閉紀錄貨單的Excel: {self.current_time_name}.xlsx 後, 再按下確定")
-        #     elif check_result == DBreturnType.EXPORT_UNRECORDED_ERROR:
-        #         print("excel unrecord data error")
-        #         messagebox.showwarning("匯出貨單錯誤", "發生錯誤，檢測到有未紀錄的貨單，但無法匯出")
-        #         break
+        self.driver = MyAcg()
+        self.database = DataBase(self.current_time_name, 'operation\\data.db', 'save')
+        while True:
+            check_result = self.database.check_previous_records(self.current_time_name, (datetime.now()-timedelta(days=1)).strftime('Printed_Order_%Y_%m_%d'))
+            if check_result == DBreturnType.SUCCESS:
+                break
+            elif check_result == DBreturnType.PERMISSION_ERROR:
+                print("excel file is opend, should be closed while checking previous records")
+                messagebox.showwarning("匯出貨單錯誤", f"Excel在開啟時無法匯出, 請關閉紀錄貨單的Excel: {self.current_time_name}.xlsx 後, 再按下確定")
+            elif check_result == DBreturnType.EXPORT_UNRECORDED_ERROR:
+                print("excel unrecord data error")
+                messagebox.showwarning("匯出貨單錯誤", "發生錯誤，檢測到有未紀錄的貨單，但無法匯出")
+                break
         
         #====================== Config ===============================
         config = ConfigParser()
@@ -76,16 +76,16 @@ class App(ctk.CTk):
         
     def on_closing(self):
         if messagebox.askokcancel("退出包貨小精靈", "確定要退出? (會自動匯出本次所有貨單)"):
-            # self.driver.shut_down()
-            # while True:
-            #     close_result = self.database.close_database()
-            #     if close_result == DBreturnType.CLOSE_AND_SAVE_ERROR:
-            #         messagebox.showwarning("匯出貨單時發生錯誤", "匯出貨單時發生錯誤, 包貨紀錄將不會匯出至excel!\n(下次啟動應用程式時將會嘗試匯出)")
-            #         break
-            #     elif close_result == DBreturnType.PERMISSION_ERROR:
-            #         messagebox.showwarning("匯出貨單時發生錯誤", "匯出貨單時發生錯誤, 請先將儲存貨單的excel關閉!")
-            #     elif close_result == DBreturnType.SUCCESS:
-            #         break
+            self.driver.shut_down()
+            while True:
+                close_result = self.database.close_database()
+                if close_result == DBreturnType.CLOSE_AND_SAVE_ERROR:
+                    messagebox.showwarning("匯出貨單時發生錯誤", "匯出貨單時發生錯誤, 包貨紀錄將不會匯出至excel!\n(下次啟動應用程式時將會嘗試匯出)")
+                    break
+                elif close_result == DBreturnType.PERMISSION_ERROR:
+                    messagebox.showwarning("匯出貨單時發生錯誤", "匯出貨單時發生錯誤, 請先將儲存貨單的excel關閉!")
+                elif close_result == DBreturnType.SUCCESS:
+                    break
             
             self.destroy()
             print("close app")
@@ -126,8 +126,8 @@ class PrintOrder(ctk.CTkFrame):
         self.success_order = parent.success_order
         self.current_id = parent.current_id
         self.cur_time_name = parent.current_time_name
-        # self.driver = parent.driver
-        # self.database = parent.database
+        self.driver = parent.driver
+        self.database = parent.database
         self.cancel_color = parent.cancel_color
         self.close_color = parent.close_color
         
@@ -143,7 +143,7 @@ class PrintOrder(ctk.CTkFrame):
         #=============================== STORAGE PATH ======================================
 
         storage_path_container = ctk.CTkFrame(master=main_view, height=37.5, fg_color="transparent")
-        storage_path_container.pack(fill="x", pady=(45, 0), padx=30)
+        storage_path_container.pack(fill="x", pady=(35, 0), padx=30)
 
         ctk.CTkLabel(master=storage_path_container, text="儲存位置: ", text_color="#fff", font=("Iansui", 24)).pack(side="left", padx=(13, 0), pady=5)
         self.save_path_combobox = ctk.CTkComboBox(master=storage_path_container, state="readonly", width=200, height = 40, font=("Iansui", 20), values=["(現在沒功能)"], button_color=parent.theme_color, border_color=parent.theme_color, 
@@ -173,7 +173,7 @@ class PrintOrder(ctk.CTkFrame):
         #=============================== ORDER COUNT ======================================
 
         counting_container = ctk.CTkFrame(master=main_view, height=60, fg_color="transparent")
-        counting_container.pack(fill="x", pady=(70, 0), padx=40)
+        counting_container.pack(fill="x", pady=(30, 0), padx=40)
 
         total_count_metric = ctk.CTkFrame(master=counting_container, fg_color=parent.dark1_color,width=300, height=37.5)
         total_count_metric.pack(side="left")
@@ -190,7 +190,7 @@ class PrintOrder(ctk.CTkFrame):
         #=============================== SEARCH BAR ======================================
 
         search_container = ctk.CTkFrame(master=main_view, height=37.5, fg_color="transparent")
-        search_container.pack(fill="x", pady=(10, 0), padx=30)
+        search_container.pack(fill="x", pady=(20, 0), padx=30)
 
         self.search_entry = ctk.CTkEntry(master=search_container, width=225, height = 30, font=("Iansui", 16), placeholder_text="搜尋貨單", border_color=parent.theme_color, border_width=2)
         self.search_entry.pack(side="left", padx=(13, 0), pady=5)
@@ -213,15 +213,15 @@ class PrintOrder(ctk.CTkFrame):
         
         printed_order_table_style = ttk.Style()
         printed_order_table_style.theme_use("clam")
-        printed_order_table_style.configure("Treeview.Heading", font=("Arial", 20))
+        printed_order_table_style.configure("Treeview.Heading", font=("Iansui", 20))
         printed_order_table_style.configure("Treeview", rowheight = 50, font=("Iansui", 16), background="#fff")
         printed_order_table_style.layout("Treeview", [('Treeview.treearea', {'sticky': 'nswe'})])
         
         self.printed_order_table = ttk.Treeview(table_frame, columns = ('id', 'time', 'order', 'status', 'save_status'), style="Treeview", show = 'headings', yscrollcommand=tree_scroll.set)
-        self.printed_order_table.column("# 1", anchor="center",width=30)
-        self.printed_order_table.column("# 2", anchor="center")
+        self.printed_order_table.column("# 1", anchor="center",width=35)
+        self.printed_order_table.column("# 2", anchor="center",width=180)
         self.printed_order_table.column("# 3", anchor="center")
-        self.printed_order_table.column("# 4", anchor="center")
+        self.printed_order_table.column("# 4", anchor="center", width=120)
         self.printed_order_table.column("# 5", anchor="center")
         self.printed_order_table.heading('id', text = 'id')
         self.printed_order_table.heading('time', text = '時間')
@@ -452,8 +452,13 @@ class PrintOrder(ctk.CTkFrame):
             print("popup unsolved")
         
         elif result == ReturnType.ALREADY_FINISH:
-            messagebox.showwarning("列印出貨單錯誤", "該訂單已取貨!")
+            messagebox.showwarning("列印出貨單錯誤", "該訂單已出貨或已完成!")
             print("already finished")
+            
+        elif result == ReturnType.ORDER_CANCELED:
+            messagebox.showwarning("取消", "此單已被取消!請至買動漫確認)")
+            print_cancel_close("cancel", current_order)
+            print("order canceled")
         
         elif result == ReturnType.ORDER_NOT_FOUND:
             messagebox.showwarning("貨單後號碼錯誤", "沒有這一單!")
@@ -467,15 +472,15 @@ class PrintOrder(ctk.CTkFrame):
             print("check box not found")
             
         elif result == ReturnType.CLICKING_CHECKBOX_ERROR:
-            print("can't click check box")
+            messagebox.showwarning("網頁自動化錯誤", "無法勾選checkbox,可能沒有這一單,自己開買動漫看一下")
+            print("can't click checkbox")
             
-        elif result == ReturnType.ORDER_CANCELED:
-            messagebox.showwarning("取消", "此單已被取消!請至買動漫確認)")
-            print_cancel_close("cancel", current_order)
-            print("order canceled")
+        elif result == ReturnType.CLICKING_PRINT_ORDER_ERROR:
+            messagebox.showwarning("網頁自動化錯誤", "無法點選列印出貨單,可能沒有這一單,自己開買動漫看一下")
+            print("can't click print order")
             
         elif result == ReturnType.STORE_CLOSED:
-            messagebox.showwarning("網頁自動化錯誤", "無法切換視窗(可能是關轉，去看買動漫，如果有我知道了按下去，不然我會當掉)")
+            messagebox.showwarning("寄送商店關轉", "該筆貨單寄送商店關轉中!")
             print_cancel_close("close", current_order)
             print("store closed")
             
