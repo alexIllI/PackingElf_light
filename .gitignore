@@ -12,3 +12,5 @@ requirements.txt
 PackingElf.spec
 \packingelf_light
 spl.html
+tkinter_test.py
+accounts.txt

@@ -39,6 +39,23 @@ class ReturnType(Enum):
     EXCUTE_PRINT_ERROR = "EXCUTE_PRINT_ERROR"
     CLOSED_TAB_ERROR = "CLOSED_TAB_ERROR"
     SUCCESS = "SUCCESS"
+    
+class AccountReturnType(Enum):
+    SUCCESS = "SUCCESS"
+    USERNAME_REPEAT = "USERNAME_REPEAT"
+    USERNAME_NOT_FOUND = "USERNAME_NOT_FOUND"
+    LOAD_AND_DECRYPT_ERROR = "LOAD_AND_DECRYPT_ERROR"
+    ADD_ACCOUNT_ERROR = "ADD_ACCOUNT_ERROR"
+    GET_ACCOUNT_INFO_ERROR = "GET_ACCOUNT_INFO_ERROR"
+    MODIFY_ACCOUNT_ERROR = "MODIFY_ACCOUNT_ERROR"
+    DELETE_ACCOUNT_ERROR = "DELETE_ACCOUNT_ERROR"
+    LOGOUT_BTN_NOT_FOUND = "LOGOUT_BTN_NOT_FOUND"
+    GET_LOGIN_PAGE_ERROR = "GET_LOGIN_PAGE_ERROR"
+    LOGIN_ACCOUNT_ERROR = "LOGIN_ACCOUNT_ERROR"
+    LOGIN_PASSWORD_ERROR = "LOGIN_PASSWORD_ERROR"
+    LOGIN_BTN_ERROR = "LOGIN_BTN_ERROR"
+    WRONG_ACCOUNT_INFO = "WRONG_ACCOUNT_INFO"
+    MY_STORE_NOT_FOUND = "MY_STORE_NOT_FOUND"
 
 #====================== Config ===============================
 config = ConfigParser()
@@ -69,11 +86,11 @@ class MyAcg():
         
         #============== Account ==============
         try:
-            info = EncryptedAccountManager()
-            info.load_and_decrypt()
+            self.account_manager = EncryptedAccountManager()
+            self.account_manager.load_and_decrypt()
             
             # if there are multiple accounts, change
-            account_info = info.get_account_by_name("meridian")
+            account_info = self.account_manager.get_account_by_name("子午計畫")
             account = account_info["account"]
             password = account_info["password"]
         except:
@@ -243,6 +260,127 @@ class MyAcg():
             return ReturnType.CLOSED_TAB_ERROR
         
         return ReturnType.SUCCESS
+    
+    def switch_account(self, username):
+
+        #============== Account ==============
+        try:
+            self.account_manager.load_and_decrypt()
+            if username not in self.account_manager.get_all_account_names():
+                return AccountReturnType.USERNAME_NOT_FOUND
+        except:
+            return AccountReturnType.LOAD_AND_DECRYPT_ERROR
+        
+        try:
+            account_info = self.account_manager.get_account_by_name(username)
+            self.account = account_info["account"]
+            self.password = account_info["password"]
+        except:
+            return AccountReturnType.GET_ACCOUNT_INFO_ERROR
+        
+        #============== Login ==============
+        if self.driver.current_url != URL:
+            try:
+                logout_btn = self.driver.find_element(By.XPATH, '/html/body/div[8]/div[3]/div[1]/p[1]/span/a')
+                logout_btn.click()
+                self.driver.get(URL)
+            except:
+                return AccountReturnType.GET_LOGIN_PAGE_ERROR
+        
+        #login account
+        try:
+            account_element = WebDriverWait(self.driver, config["WebOperation"]["waittime"]).until(
+                EC.presence_of_element_located((By.NAME, "account")))
+            account_element.clear()
+            account_element.send_keys(self.account)
+        except:
+            return AccountReturnType.LOGIN_ACCOUNT_ERROR
+        
+        #login password
+        try:
+            password_element = WebDriverWait(self.driver, config["WebOperation"]["waittime"]).until(
+                EC.presence_of_element_located((By.NAME, "password")))
+            password_element.clear()
+            password_element.send_keys(self.password)
+        except:
+            return AccountReturnType.LOGIN_PASSWORD_ERROR
+        
+        #login button
+        try:
+            Login_btn = WebDriverWait(self.driver, config["WebOperation"]["waittime"]).until(
+                EC.presence_of_element_located((By.XPATH, '//*[@id="form1"]/div/div/div[2]/div[5]/div[1]/a')))
+            Login_btn.click()
+        except:
+            return AccountReturnType.LOGIN_BTN_ERROR
+        
+        try:
+            alert = self.driver.switch_to.alert
+            alert.accept()
+            return AccountReturnType.WRONG_ACCOUNT_INFO
+        except:
+            pass
+
+        #find 我的賣場 element and click
+        try:
+            locate_store = (By.XPATH, '//*[@id="topbar"]/div/ul/li[1]/a')
+            Store = WebDriverWait(self.driver, config["WebOperation"]["longerwaittime"]).until(
+                EC.presence_of_element_located(locate_store),
+                "Can't find my store button")
+            Store.click()
+        except:
+            print("我的賣場按鈕連線超時")
+            return AccountReturnType.MY_STORE_NOT_FOUND
+        
+        return AccountReturnType.SUCCESS
+
+    
+    def create_account(self, username, account, password):
+        try:
+            self.account_manager.load_and_decrypt()
+            if username in self.account_manager.get_all_account_names():
+                return AccountReturnType.USERNAME_REPEAT
+        except:
+            return AccountReturnType.LOAD_AND_DECRYPT_ERROR
+        
+        try:
+            self.account_manager.add_account(username, {"account": account, "password": password})
+            self.account_manager.encrypt_and_save()
+            return AccountReturnType.SUCCESS
+        except:
+            return AccountReturnType.ADD_ACCOUNT_ERROR
+        
+    def modify_account(self, username, account, password):
+        try:
+            self.account_manager.load_and_decrypt()
+            if username not in self.account_manager.get_all_account_names():
+                return AccountReturnType.USERNAME_NOT_FOUND
+        except:
+            return AccountReturnType.LOAD_AND_DECRYPT_ERROR
+        
+        try:
+            self.account_manager.update_account_by_name(username, {"account": account, "password": password})
+            self.account_manager.encrypt_and_save()
+            return AccountReturnType.SUCCESS
+        except:
+            return AccountReturnType.MODIFY_ACCOUNT_ERROR
+        
+    def delete_account(self, username):
+        try:
+            self.account_manager.load_and_decrypt()
+            if username not in self.account_manager.get_all_account_names():
+                return AccountReturnType.USERNAME_NOT_FOUND
+        except:
+            return AccountReturnType.LOAD_AND_DECRYPT_ERROR
+        
+        try:
+            self.account_manager.delete_account_by_name(username)
+            self.account_manager.encrypt_and_save()
+            return AccountReturnType.SUCCESS
+        except:
+            return AccountReturnType.DELETE_ACCOUNT_ERROR
+            
+    def get_all_account_names(self):
+        return self.account_manager.get_all_account_names()
         
     def shut_down(self):
         self.driver.quit()
