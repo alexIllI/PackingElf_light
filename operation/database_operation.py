@@ -1,7 +1,18 @@
 import os
+import sys
 import sqlite3
 import pandas as pd
 from enum import Enum
+
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
 
 #====================== Enum ===============================
 class DBreturnType(Enum):
@@ -17,9 +28,9 @@ class DataBase():
     def __init__(self, table_name:str, database_path:str ,save_path:str):
         #================= Date for DBname ========================
         self.table_name = table_name
-        self.save_path = save_path
+        self.save_path = resource_path(save_path)
         
-        self.connection = sqlite3.connect(database_path)
+        self.connection = sqlite3.connect(resource_path(database_path))
         table_create_query = f"CREATE TABLE IF NOT EXISTS {self.table_name} (table_id INT, time TEXT, order_number TEXT, status TEXT, save_status TEXT, record TEXT)"
         self.connection.execute(table_create_query)
         self.cursor = self.connection.cursor()
@@ -34,7 +45,7 @@ class DataBase():
                 new_data_df = pd.DataFrame(unrecorded_data, columns=['時間', '貨單號碼', '狀態'])
                 
                  # Check if the file already exists
-                file_path = os.path.join('save', f"{current_table_name}.xlsx")
+                file_path = os.path.join(self.save_path, f"{current_table_name}.xlsx")
                 if os.path.exists(file_path):
                     # If the file exists, append the data to the first sheet
                     try:
