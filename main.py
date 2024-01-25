@@ -5,6 +5,7 @@ import customtkinter as ctk
 from tkinter import ttk
 from tkinter import messagebox
 from PIL import Image
+import pyglet
 
 from datetime import datetime, timedelta
 from configparser import ConfigParser
@@ -12,7 +13,7 @@ from configparser import ConfigParser
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
-        
+        pyglet.font.add_file("font\\Iansui-Regular.ttf")
         self.total_order = 0
         self.success_order = 0
         self.current_id = 0
@@ -130,10 +131,10 @@ class PrintOrder(ctk.CTkFrame):
         storage_path_container.pack(fill="x", pady=(45, 0), padx=30)
 
         ctk.CTkLabel(master=storage_path_container, text="儲存位置: ", text_color="#fff", font=("Iansui", 24)).pack(side="left", padx=(13, 0), pady=5)
-        self.save_path_combobox = ctk.CTkComboBox(master=storage_path_container, state="readonly", width=200, height = 40, font=("Iansui", 20), values=["貨單.xlsx"], button_color=parent.theme_color, border_color=parent.theme_color, 
+        self.save_path_combobox = ctk.CTkComboBox(master=storage_path_container, state="readonly", width=200, height = 40, font=("Iansui", 20), values=["(現在沒功能)"], button_color=parent.theme_color, border_color=parent.theme_color, 
                     border_width=2, button_hover_color=parent.theme_color_dark, dropdown_hover_color=parent.theme_color_dark, dropdown_fg_color=parent.theme_color, dropdown_text_color=parent.dark0_color)
         self.save_path_combobox.pack(side="left", padx=(13, 0), pady=15)
-        self.save_path_combobox.set("貨單.xlsx")
+        self.save_path_combobox.set("(現在沒功能)")
 
         #=============================== PRINTER ORDER ======================================
 
@@ -211,7 +212,7 @@ class PrintOrder(ctk.CTkFrame):
         self.printed_order_table.heading('time', text = '時間')
         self.printed_order_table.heading('order', text = '貨單編號')
         self.printed_order_table.heading('status', text = '狀態')
-        self.printed_order_table.heading('save_status', text = '儲存狀態')
+        self.printed_order_table.heading('save_status', text = '儲存位置')
         self.printed_order_table.pack(fill = 'both', expand = True)
         
         self.printed_order_table.tag_configure('cancel', background=parent.cancel_color)
