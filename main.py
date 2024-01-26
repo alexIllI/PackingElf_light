@@ -91,9 +91,13 @@ class App(ctk.CTk):
         package_img_data = Image.open(resource_path("images\printer.png"))
         package_img = ctk.CTkImage(dark_image=package_img_data, light_image=package_img_data)
 
-        ctk.CTkButton(master=self.sidebar_frame, width=200, image=package_img, text="列印出貨單", fg_color=self.dark1_color, font=("Iansui", 18), 
-                hover_color=self.dark3_color, anchor="center", command=lambda: self.show_frame("frame_PrintOrder")).pack(anchor="center", ipady=5, pady=(135, 0))
-
+        self.print_prder_btn = ctk.CTkButton(master=self.sidebar_frame, width=200, image=package_img, text="列印出貨單", fg_color=self.dark1_color, font=("Iansui", 18), 
+                hover_color=self.dark3_color, anchor="center", command=lambda: self.show_frame("frame_PrintOrder"))
+        self.print_prder_btn.pack(anchor="center", ipady=5, pady=(135, 0))
+        
+        #==============================================
+        self.current_selected_btn = self.print_prder_btn
+        
         list_img_data = Image.open(resource_path("images\list_icon.png"))
         list_img = ctk.CTkImage(dark_image=list_img_data, light_image=list_img_data)
         ctk.CTkButton(master=self.sidebar_frame, width=200, image=list_img, text="儲存管理", fg_color="transparent", font=("Iansui", 18), 
@@ -106,9 +110,9 @@ class App(ctk.CTk):
         
         settings_img_data = Image.open(resource_path("images\person_icon.png"))
         settings_img = ctk.CTkImage(dark_image=settings_img_data, light_image=settings_img_data)
-        self.account_name_label = ctk.CTkButton(master=self.sidebar_frame, width=200, image=settings_img, text="子午計畫", fg_color="transparent", font=("Iansui", 18), 
+        self.account_name_btn = ctk.CTkButton(master=self.sidebar_frame, width=200, image=settings_img, text="子午計畫", fg_color="transparent", font=("Iansui", 18), 
                 hover_color=self.dark3_color, anchor="center", command=lambda: self.show_frame("frame_Account"))
-        self.account_name_label.pack(anchor="s", ipady=5, pady=(80, 0),)
+        self.account_name_btn.pack(anchor="s", ipady=5, pady=(80, 0),)
         
         #========================== Other Pages ===========================
         self.frames = {}
@@ -124,6 +128,16 @@ class App(ctk.CTk):
         '''Show a frame for the given page name'''
         frame = self.frames[page_name]
         frame.tkraise()
+        
+        self.current_selected_btn.configure(fg_color="transparent")
+        
+        if page_name == "frame_PrintOrder":
+            self.current_selected_btn = self.print_prder_btn
+            self.print_prder_btn.configure(fg_color=self.dark1_color)
+            
+        elif page_name == "frame_Account":
+            self.current_selected_btn = self.account_name_btn
+            self.account_name_btn.configure(fg_color=self.dark1_color)
         
     def on_closing(self):
         if messagebox.askokcancel("退出包貨小精靈", "確定要退出? (會自動匯出本次所有貨單)"):
@@ -147,7 +161,7 @@ class frame_Account(ctk.CTkFrame):
         self.account_manager = parent.myacg_manager
         self.current_account = parent.current_account
         self.account_list = self.account_manager.get_all_account_names()
-        self.account_name_label = parent.account_name_label
+        self.account_name_btn = parent.account_name_btn
         #=============================== TITLE ======================================
 
         title_frame = ctk.CTkFrame(master=self, fg_color="transparent")
@@ -392,7 +406,7 @@ class frame_Account(ctk.CTkFrame):
                 return
             elif switch_account_result == AccountReturnType.SUCCESS:
                 messagebox.showinfo("重新登入帳號提示", f"成功登入帳號: {self.current_account}!")
-                self.account_name_label.configure(text = self.current_account)
+                self.account_name_btn.configure(text = self.current_account)
                 print(f"login to {self.current_account} success")
                 return
             
@@ -489,7 +503,7 @@ class frame_PrintOrder(ctk.CTkFrame):
         
         printed_order_table_style = ttk.Style()
         printed_order_table_style.theme_use("clam")
-        printed_order_table_style.configure("Treeview.Heading", font=("Iansui", 20))
+        printed_order_table_style.configure("Treeview.Heading", font=("Iansui", 18))
         printed_order_table_style.configure("Treeview", rowheight = 50, font=("Iansui", 16), background="#fff")
         printed_order_table_style.layout("Treeview", [('Treeview.treearea', {'sticky': 'nswe'})])
         
