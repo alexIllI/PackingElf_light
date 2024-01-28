@@ -152,6 +152,12 @@ class MyAcg():
         if len(self.driver.window_handles) > 1:
             return ReturnType.MULTIPLE_TAB
         
+        #======================================= TEST RETURN ============================================
+        
+        # return ReturnType.SUCCESS
+    
+        #=================================================================================================
+    
         #check if last one is closed, the popup window had been handled
         try:
             search_bar = self.driver.find_element(By.NAME, 'o_num') #search bar element
