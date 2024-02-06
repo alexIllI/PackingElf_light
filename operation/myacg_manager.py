@@ -152,12 +152,6 @@ class MyAcg():
         if len(self.driver.window_handles) > 1:
             return ReturnType.MULTIPLE_TAB
         
-        #======================================= TEST RETURN ============================================
-        
-        # return ReturnType.SUCCESS
-    
-        #=================================================================================================
-    
         #check if last one is closed, the popup window had been handled
         try:
             search_bar = self.driver.find_element(By.NAME, 'o_num') #search bar element
@@ -166,7 +160,11 @@ class MyAcg():
             search = self.driver.find_element(By.XPATH, '//*[@id="search_goods"]/div[4]/ul/li[2]/a') #search button element
             search.click()
         except:
-            return ReturnType.POPUP_UNSOLVED
+            try:
+                self.driver.switch_to.window(self.driver.window_handles[0])
+                return ReturnType.STORE_CLOSED
+            except:
+                return ReturnType.POPUP_UNSOLVED
         
         #check if the order exist
         try:
@@ -184,13 +182,13 @@ class MyAcg():
             pass
         
         #check if the order already finished
-        try:
-            #locate print order button as indicator of whether it's finished
-            self.driver.find_element(By.XPATH, '//*[@id="wrap"]/div[2]/div[2]/div[1]/table/tbody/tr/td[7]/a[4]')
-        except:
-            return ReturnType.ALREADY_FINISH
+        # try:
+        #     # locate print order button as indicator of whether it's finished
+        #     self.driver.find_element(By.XPATH, '//*[@id="wrap"]/div[2]/div[2]/div[1]/table/tbody/tr/td[7]/a[4]')
+        # except:
+        #     return ReturnType.ALREADY_FINISH
         
-        #check if there is closed tag
+        # check if there is closed tag
         try:
             self.driver.find_element(By.XPATH, '//*[@id="wrap"]/div[2]/div[2]/div[1]/table/tbody/tr[1]/td[7]/span')
             return ReturnType.STORE_CLOSED
@@ -232,6 +230,16 @@ class MyAcg():
         #測試是否有開啟新分頁
         try:
             self.driver.switch_to.window(self.driver.window_handles[1])
+            #測試是否可以handle pop up
+            try:
+                alert = self.driver.switch_to.alert
+                print(f"popup alert showing message: {alert.text}")
+                alert.accept()
+                self.driver.close()
+                self.driver.switch_to.window(self.driver.window_handles[0])
+                return ReturnType.STORE_CLOSED
+            except:
+                pass
         except:
             #測試是否可以handle pop up
             try:
