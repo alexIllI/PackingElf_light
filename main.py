@@ -145,7 +145,7 @@ class App(ctk.CTk):
             while True:
                 close_result = self.database.close_database()
                 if close_result == DBreturnType.CLOSE_AND_SAVE_ERROR:
-                    messagebox.showwarning("匯出貨單時發生錯誤", "匯出貨單時發生錯誤, 包貨紀錄將不會匯出至excel!\n(下次啟動應用程式時將會嘗試匯出)")
+                    messagebox.showwarning("匯出貨單時發生錯誤", "匯出貨單時發生錯誤, 包貨紀錄將不會匯出至excel!\n(下次啟動應用程式時將會嘗試匯出至excel)")
                     break
                 elif close_result == DBreturnType.PERMISSION_ERROR:
                     messagebox.showwarning("匯出貨單時發生錯誤", "匯出貨單時發生錯誤, 請先將儲存貨單的excel關閉!")
@@ -503,8 +503,8 @@ class frame_PrintOrder(ctk.CTkFrame):
         
         printed_order_table_style = ttk.Style()
         printed_order_table_style.theme_use("clam")
-        printed_order_table_style.configure("Treeview.Heading", font=("Iansui", 18))
-        printed_order_table_style.configure("Treeview", rowheight = 50, font=("Iansui", 16), background="#fff")
+        printed_order_table_style.configure("Treeview.Heading", font=("Iansui", 16))
+        printed_order_table_style.configure("Treeview", rowheight = 50, font=("Iansui", 14), background="#fff")
         printed_order_table_style.layout("Treeview", [('Treeview.treearea', {'sticky': 'nswe'})])
         
         self.printed_order_table = ttk.Treeview(table_frame, columns = ('id', 'time', 'order', 'status', 'save_status'), style="Treeview", show = 'headings', yscrollcommand=tree_scroll.set)
@@ -524,25 +524,6 @@ class frame_PrintOrder(ctk.CTkFrame):
         self.printed_order_table.tag_configure('close', background=parent.close_color)
         
         tree_scroll.configure(command=self.printed_order_table.yview)
-        
-        #======================================================== TEST ========================================================
-        # for i in range(10):
-        #     self.total_order += 1
-        #     self.success_order += 1
-        #     self.current_id += 1
-        #     self.database.insert_data(self.current_id, datetime.now().strftime('%H:%M:%S'), f"PG000{i}", 'success', self.cur_time_name)
-        #     self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, datetime.now().strftime('%H:%M:%S'), f"PG000{i}", '成功', self.cur_time_name))
-        
-        # self.total_order += 1
-        # self.current_id += 1
-        # self.database.insert_data(self.current_id, datetime.now().strftime('%H:%M:%S'), f"PG000{11}", 'close', self.cur_time_name)
-        # self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, datetime.now().strftime('%H:%M:%S'), f"PG000{11}", '關轉', self.cur_time_name), tags = ("close",))
-        
-        # self.total_order += 1
-        # self.current_id += 1
-        # self.database.insert_data(self.current_id, datetime.now().strftime('%H:%M:%S'), f"PG000{22}", 'close', self.cur_time_name)
-        # self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, datetime.now().strftime('%H:%M:%S'), f"PG000{22}", '關轉', self.cur_time_name), tags = ("close",))
-        #======================================================== TEST ========================================================
         
         # events
         def item_select(_):
