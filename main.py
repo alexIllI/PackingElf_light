@@ -423,6 +423,10 @@ class frame_PrintOrder(ctk.CTkFrame):
         self.cur_time_name = parent.current_time_name
         self.cancel_color = parent.cancel_color
         self.close_color = parent.close_color
+        self.last_order = ""
+        
+        excel_extention = '.xlsx'
+        self.excel_list = [filename.rstrip(excel_extention) for filename in os.listdir("save") if filename.endswith(excel_extention)]
         
         #=============================== TITLE ======================================
 
@@ -435,11 +439,17 @@ class frame_PrintOrder(ctk.CTkFrame):
         storage_path_container = ctk.CTkFrame(master=self, height=37.5, fg_color="transparent")
         storage_path_container.pack(fill="x", pady=(35, 0), padx=30)
 
-        ctk.CTkLabel(master=storage_path_container, text="儲存位置: ", text_color="#fff", font=("Iansui", 24)).pack(side="left", padx=(13, 0), pady=5)
-        self.save_path_combobox = ctk.CTkComboBox(master=storage_path_container, state="readonly", width=200, height = 40, font=("Iansui", 20), values=["(現在沒功能)"], button_color=parent.theme_color, border_color=parent.theme_color, 
+        ctk.CTkLabel(master=storage_path_container, text="匯入紀錄: ", text_color="#fff", font=("Iansui", 24)).pack(side="left", padx=(13, 0), pady=5)
+        self.save_path_combobox = ctk.CTkComboBox(master=storage_path_container, state="readonly", width=280, height = 40, font=("Iansui", 20), values=self.excel_list, button_color=parent.theme_color, border_color=parent.theme_color, 
                     border_width=2, button_hover_color=parent.theme_color_dark, dropdown_hover_color=parent.theme_color_dark, dropdown_fg_color=parent.theme_color, dropdown_text_color=parent.dark0_color)
         self.save_path_combobox.pack(side="left", padx=(13, 0), pady=15)
-        self.save_path_combobox.set("(現在沒功能)")
+        if len(self.excel_list) > 0:
+            self.save_path_combobox.set((self.excel_list)[0])
+        else:
+            self.save_path_combobox.set("資料夾中無Excel")
+            
+        ctk.CTkButton(master=prnit_order_container, width=75, height = 40, text="匯入", font=("Iansui", 18), text_color=parent.dark0_color, 
+                                          fg_color=parent.theme_color, hover_color=parent.theme_color_dark, command=self.importExcel).pack(anchor="ne", padx=(40, 0), pady=15, side="left")
 
         #=============================== PRINTER ORDER ======================================
 
@@ -459,6 +469,9 @@ class frame_PrintOrder(ctk.CTkFrame):
 
         ctk.CTkButton(master=prnit_order_container, width=75, height = 40, text="列印", font=("Iansui", 18), text_color=parent.dark0_color, 
                                           fg_color=parent.theme_color, hover_color=parent.theme_color_dark, command=self.printToprinter).pack(anchor="ne", padx=(40, 0), pady=15, side="left")
+        
+        ctk.CTkButton(master=prnit_order_container, width=75, height = 40, text="重印上一單", font=("Iansui", 18), text_color=parent.dark0_color, 
+                                          fg_color=parent.theme_color, hover_color=parent.theme_color_dark, command=self.printLastOrder).pack(anchor="ne", padx=(10, 0), pady=15, side="left")
         
         #=============================== ORDER COUNT ======================================
 
@@ -650,6 +663,107 @@ class frame_PrintOrder(ctk.CTkFrame):
                     self.success_order -= 1
                 self.total_order -= 1
                 self.update(self.view_status_enrty.get())
+    
+    def importExcel(self):
+        selected_excel = self.save_path_combobox.get() + ".xlsx"
+        pass
+                
+    def printLastOrder(self):
+        def print_cancel_close(_status:str, order):
+            self.total_order += 1
+            self.current_id += 1
+            self.label_total_order_number.configure(text = f"目前貨單總數: {self.total_order}")
+            cur_time = datetime.now().strftime('%H:%M:%S')
+            self.database.insert_data(self.current_id, cur_time, order, _status, self.cur_time_name)
+            if _status == "close":
+                self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, cur_time, order, "關轉", self.cur_time_name), tags = (_status,))
+            else:
+                self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, cur_time, order, "取消", self.cur_time_name), tags = (_status,))
+            self.update(self.view_status_enrty.get())
+        
+        def print_success(order):
+            self.total_order += 1
+            self.success_order += 1
+            self.current_id += 1
+            self.label_total_order_number.configure(text = f"目前貨單總數: {self.total_order}")
+            self.label_success_order_number.configure(text = f"成功列印貨單總數: {self.success_order}")
+            cur_time = datetime.now().strftime('%H:%M:%S')
+            self.database.insert_data(self.current_id, cur_time, order, 'success', self.cur_time_name)
+            self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, cur_time, order, '成功', self.cur_time_name))
+            self.update(self.view_status_enrty.get())
+            
+        if self.last_order == "":
+            messagebox.showwarning("無法重印上一單", "找不到上一單的資訊!")
+            print("no last order")
+            return
+        
+        self.database.delete_data(self.last_order)        
+        result = self.myacg_manager.printer(self.last_order)
+        
+        if result == ReturnType.MULTIPLE_TAB:
+            messagebox.showwarning("網頁自動化錯誤", "請開啟瀏覽器將買動漫以外的分頁關閉!")
+            print("meltiple tab detected")
+            
+        elif result == ReturnType.POPUP_UNSOLVED:
+            messagebox.showwarning("網頁自動化錯誤", "你可能沒有按'我知道了',打開買動漫,按下去")
+            print("popup unsolved")
+        
+        elif result == ReturnType.ALREADY_FINISH:
+            messagebox.showwarning("列印出貨單錯誤", "該訂單已出貨或已完成!")
+            print("already finished")
+            
+        elif result == ReturnType.ORDER_CANCELED:
+            messagebox.showwarning("取消", "此單已被取消!請至買動漫確認)")
+            print_cancel_close("cancel", self.last_order)
+            print("order canceled")
+        
+        elif result == ReturnType.ORDER_NOT_FOUND:
+            messagebox.showwarning("貨單後號碼錯誤", "沒有這一單!")
+            print("order not found")
+            
+        elif result == ReturnType.ORDER_NOT_FOUND_ERROR:
+            print("order not found raises error")
+            
+        elif result == ReturnType.CHECKBOX_NOT_FOUND:
+            messagebox.showwarning("網頁自動化錯誤", "找不到checkbox,可能沒有這一單,自己開買動漫看一下")
+            print("check box not found")
+            
+        elif result == ReturnType.CLICKING_CHECKBOX_ERROR:
+            messagebox.showwarning("網頁自動化錯誤", "無法勾選checkbox,可能沒有這一單,自己開買動漫看一下")
+            print("can't click checkbox")
+            
+        elif result == ReturnType.CLICKING_PRINT_ORDER_ERROR:
+            messagebox.showwarning("網頁自動化錯誤", "無法點選列印出貨單,可能沒有這一單,自己開買動漫看一下")
+            print("can't click print order")
+            
+        elif result == ReturnType.STORE_CLOSED:
+            messagebox.showwarning("寄送商店關轉", "該筆貨單寄送商店關轉中!")
+            print_cancel_close("close", self.last_order)
+            print("store closed")
+            
+        elif result == ReturnType.SWITCH_TAB_ERROR:
+            messagebox.showwarning("網頁自動化錯誤", "無法切換視窗(可能是關轉，去看買動漫，如果有我知道了按下去，不然我會當掉)")
+            print("switch tab error")
+            
+        elif result == ReturnType.LOAD_HTML_BODY_ERROR:
+            print("loading html body error")
+            
+        elif result == ReturnType.EXCUTE_PRINT_ERROR:
+            messagebox.showwarning("列印失敗", "列印失敗，不會記錄貨單!請再列印一次")
+            print("excute print error")
+            
+        elif result == ReturnType.CLOSED_TAB_ERROR:
+            messagebox.showwarning("網頁自動化錯誤", "成功列印出貨單，已經記錄在文件中。但關閉分頁時發生異常，請手動關閉'出貨單'分頁!!!!")
+            print_success(self.last_order)
+            print("closed tab error")
+            
+        elif result == ReturnType.SUCCESS:
+            print_success(self.last_order)
+            print("Success!")
+        
+        else:
+            print("Enum error!")
+            return
         
     def printToprinter(self):
         def print_cancel_close(_status:str, order):
@@ -694,6 +808,7 @@ class frame_PrintOrder(ctk.CTkFrame):
         
         current_order = f"PG{self.order_combobox.get()}{self.order_entry.get()}"
         self.order_entry.delete(0, 'end')
+        self.last_order = current_order
         
         #check if it is repeated order
         check_repeat_result =  self.database.search_order(current_order)
