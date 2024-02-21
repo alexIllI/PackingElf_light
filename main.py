@@ -100,8 +100,9 @@ class App(ctk.CTk):
         
         list_img_data = Image.open(resource_path("images\list_icon.png"))
         list_img = ctk.CTkImage(dark_image=list_img_data, light_image=list_img_data)
-        ctk.CTkButton(master=self.sidebar_frame, width=200, image=list_img, text="儲存管理", fg_color="transparent", font=("Iansui", 18), 
-                hover_color=self.dark3_color, anchor="center").pack(anchor="center", ipady=5, pady=(16, 0))
+        self.saveSetting_btn = ctk.CTkButton(master=self.sidebar_frame, width=200, image=list_img, text="儲存管理", fg_color="transparent", font=("Iansui", 18), 
+                hover_color=self.dark3_color, anchor="center", command=lambda: self.show_frame("frame_SaveSetting"))
+        self.saveSetting_btn.pack(anchor="center", ipady=5, pady=(16, 0))
 
         settings_img_data = Image.open(resource_path("images\settings_icon.png"))
         settings_img = ctk.CTkImage(dark_image=settings_img_data, light_image=settings_img_data)
@@ -116,7 +117,7 @@ class App(ctk.CTk):
         
         #========================== Other Pages ===========================
         self.frames = {}
-        for F in (frame_Account, frame_PrintOrder):
+        for F in (frame_Account, frame_PrintOrder, frame_SaveSetting):
             page_name = F.__name__
             frame = F(parent_frame=self.root_container, parent=self)
             self.frames[page_name] = frame
@@ -138,6 +139,10 @@ class App(ctk.CTk):
         elif page_name == "frame_Account":
             self.current_selected_btn = self.account_name_btn
             self.account_name_btn.configure(fg_color=self.dark1_color)
+            
+        elif page_name == "frame_SaveSetting":
+            self.current_selected_btn = self.saveSetting_btn
+            self.saveSetting_btn.configure(fg_color=self.dark1_color)
         
     def on_closing(self):
         if messagebox.askokcancel("退出包貨小精靈", "確定要退出? (會自動匯出本次所有貨單)"):
@@ -409,7 +414,32 @@ class frame_Account(ctk.CTkFrame):
                 self.account_name_btn.configure(text = self.current_account)
                 print(f"login to {self.current_account} success")
                 return
-            
+
+class frame_SaveSetting(ctk.CTkFrame):
+    def __init__(self, parent_frame, parent):
+        ctk.CTkFrame.__init__(self, parent_frame, fg_color=parent.dark0_color, corner_radius=0)
+        
+        excel_extention = '.xlsx'
+        self.excel_list = [filename.rstrip(excel_extention) for filename in os.listdir("save") if filename.endswith(excel_extention)]
+        self.excel_list.insert(0, parent.current_time_name)
+        #=============================== TITLE ======================================
+
+        title_frame = ctk.CTkFrame(master=self, fg_color="transparent")
+        title_frame.pack(anchor="n", fill="x",  padx=27, pady=(29, 0))
+        ctk.CTkLabel(master=title_frame, text="儲存管理", font=("Iansui", 32), text_color=parent.theme_color).pack(anchor="nw", side="left")
+        
+        #=============================== SELECT EXCEL ======================================
+
+        storage_excel_container = ctk.CTkFrame(master=self, height=37.5, fg_color="transparent")
+        storage_excel_container.pack(fill="x", pady=(35, 0), padx=30)
+
+        ctk.CTkLabel(master=storage_excel_container, text="選擇欲儲存的Excel: ", text_color="#fff", font=("Iansui", 24)).pack(side="left", padx=(13, 0), pady=5)
+        self.save_excel_combobox = ctk.CTkComboBox(master=storage_excel_container, state="readonly", width=320, height = 40, font=("Iansui", 20), values=self.excel_list, button_color=parent.theme_color, border_color=parent.theme_color, 
+                    border_width=2, button_hover_color=parent.theme_color_dark, dropdown_hover_color=parent.theme_color_dark, dropdown_fg_color=parent.theme_color, dropdown_text_color=parent.dark0_color)
+        self.save_excel_combobox.pack(side="left", padx=(13, 0), pady=15)
+        
+        self.save_excel_combobox.set((self.excel_list)[0])
+                
 class frame_PrintOrder(ctk.CTkFrame):
     def __init__(self, parent_frame, parent):
         ctk.CTkFrame.__init__(self, parent_frame, fg_color=parent.dark0_color, corner_radius=0)    
@@ -440,7 +470,7 @@ class frame_PrintOrder(ctk.CTkFrame):
         storage_path_container.pack(fill="x", pady=(35, 0), padx=30)
 
         ctk.CTkLabel(master=storage_path_container, text="匯入紀錄: ", text_color="#fff", font=("Iansui", 24)).pack(side="left", padx=(13, 0), pady=5)
-        self.save_path_combobox = ctk.CTkComboBox(master=storage_path_container, state="readonly", width=280, height = 40, font=("Iansui", 20), values=self.excel_list, button_color=parent.theme_color, border_color=parent.theme_color, 
+        self.save_path_combobox = ctk.CTkComboBox(master=storage_path_container, state="readonly", width=320, height = 40, font=("Iansui", 20), values=self.excel_list, button_color=parent.theme_color, border_color=parent.theme_color, 
                     border_width=2, button_hover_color=parent.theme_color_dark, dropdown_hover_color=parent.theme_color_dark, dropdown_fg_color=parent.theme_color, dropdown_text_color=parent.dark0_color)
         self.save_path_combobox.pack(side="left", padx=(13, 0), pady=15)
         if len(self.excel_list) > 0:
@@ -448,7 +478,7 @@ class frame_PrintOrder(ctk.CTkFrame):
         else:
             self.save_path_combobox.set("資料夾中無Excel")
             
-        ctk.CTkButton(master=prnit_order_container, width=75, height = 40, text="匯入", font=("Iansui", 18), text_color=parent.dark0_color, 
+        ctk.CTkButton(master=storage_path_container, width=75, height = 40, text="匯入", font=("Iansui", 18), text_color=parent.dark0_color, 
                                           fg_color=parent.theme_color, hover_color=parent.theme_color_dark, command=self.importExcel).pack(anchor="ne", padx=(40, 0), pady=15, side="left")
 
         #=============================== PRINTER ORDER ======================================

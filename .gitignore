@@ -2,7 +2,7 @@ test.py
 config.py
 dark_theme_layout.png
 operation\data.db
-\save
+*.xlsx
 operation/__pycache__
 operation/data.db
 requirements_conda.txt
