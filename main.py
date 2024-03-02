@@ -37,6 +37,8 @@ class App(ctk.CTk):
         self.current_time_name = datetime.now().strftime('Printed_Order_%Y_%m_%d')
         self.current_account = "子午計畫"
         
+        self.save_excel_name = self.current_time_name
+        
         #====================== Operation =========================
         self.myacg_manager = MyAcg()
         self.database = DataBase(self.current_time_name, 'operation\\data.db', 'save')
@@ -422,7 +424,7 @@ class frame_SaveSetting(ctk.CTkFrame):
         
         excel_extention = '.xlsx'
         self.excel_list = [filename.rstrip(excel_extention) for filename in os.listdir("save") if filename.endswith(excel_extention)]
-        self.excel_list.insert(0, parent.current_time_name)
+        # self.excel_list.insert(0, parent.current_time_name)
         self.saving_value = ctk.StringVar(value = "default")
         #=============================== TITLE ======================================
 
@@ -434,7 +436,7 @@ class frame_SaveSetting(ctk.CTkFrame):
         default_excel_container = ctk.CTkFrame(master=self, height=37.5, fg_color="transparent")
         default_excel_container.pack(fill="x", pady=(50, 0), padx=30)
 
-        ctk.CTkLabel(master=default_excel_container, text=f"預設儲存的Excel: {parent.current_time_name}", text_color="#fff", font=("Iansui", 30)).pack(fill="x", padx=(13, 0), pady=5)
+        ctk.CTkLabel(master=default_excel_container, text=f"預設儲存的Excel: {parent.current_time_name}", text_color="#fff", font=("Iansui", 26)).pack(fill="x", pady=5)
         
         #=============================== CREATE NEW EXCEL ======================================
         create_excel_container = ctk.CTkFrame(master=self, height=37.5, fg_color="transparent")
@@ -481,10 +483,12 @@ class frame_SaveSetting(ctk.CTkFrame):
         save_excel_btn_container.grid_rowconfigure(0, weight=1)
         save_excel_btn_container.grid_columnconfigure(0, weight=1)
         save_excel_btn_container.grid_columnconfigure(1, weight=1)
-        ctk.CTkButton(master=save_excel_btn_container, width=75, height = 40, text="確認", font=("Iansui", 18), text_color=parent.dark0_color, 
-                                          fg_color=parent.theme_color, hover_color=parent.theme_color_dark, command=self.confirm_setting).grid(row=0, column=0, pady=(10,0), padx=10, sticky="e")
-        ctk.CTkButton(master=save_excel_btn_container, width=75, height = 40, text="恢復預設", font=("Iansui", 18), text_color=parent.dark0_color, 
-                                          fg_color=parent.theme_color, hover_color=parent.theme_color_dark, command=self.reset_setting).grid(row=0, column=1, pady=(10,0), padx=10, sticky="w")
+        self.confirm_btn = ctk.CTkButton(master=save_excel_btn_container, width=75, height = 40, text="確認", font=("Iansui", 18), text_color=parent.dark0_color, 
+                                          fg_color=parent.theme_color, hover_color=parent.theme_color_dark, command=self.confirm_setting)
+        self.confirm_btn.grid(row=0, column=0, pady=(10,0), padx=10, sticky="e")
+        self.reset_btn = ctk.CTkButton(master=save_excel_btn_container, width=75, height = 40, text="恢復預設", font=("Iansui", 18), text_color=parent.dark0_color, 
+                                          fg_color=parent.theme_color, hover_color=parent.theme_color_dark, command=self.reset_setting)
+        self.reset_btn.grid(row=0, column=1, pady=(10,0), padx=10, sticky="w")
         
     # turn other checkbox into DISABLE    
     def checkbox_event(self, checkbox_value):
@@ -501,13 +505,42 @@ class frame_SaveSetting(ctk.CTkFrame):
         else:
             for C in (self.newname_checkbox, self.append_checkbox, self.replace_checkbox, self.create_excel_entry, self.append_excel_combobox, self.replace_excel_combobox):
                 C.configure(state=tkinter.NORMAL)
-            self.saving_value.configure(value="default")
+            self.saving_value.set(value="default")
     
     def confirm_setting(self):
-        pass
+        command = self.saving_value.get()
+        if command == "default":
+            print("save setting: default")
+        elif command == "newName_on":
+            new_excel_name = self.create_excel_entry.get()
+            if not new_excel_name:
+                messagebox.showwarning("名稱錯誤", "請輸入欲創建的Excel名稱後, 再按下確認")
+                print("empty new excel name entry")
+                return
+            
+            print(f"save setting: save to new excel '{new_excel_name}'")
+        elif command == "append_on":
+            append_excel_name = self.append_excel_combobox.get()
+            print(f"saving setting: append to excel '{append_excel_name}'")
+        elif command == "replace_on":
+            replace_excel_name = self.replace_excel_combobox.get()
+            print(f"saving setting: replace excel '{replace_excel_name}'")
     
     def reset_setting(self):
-        pass
+        for C in (self.newname_checkbox, self.append_checkbox, self.replace_checkbox):
+            C.deselect()
+        for C in (self.newname_checkbox, self.append_checkbox, self.replace_checkbox, self.create_excel_entry, self.append_excel_combobox, self.replace_excel_combobox):
+            C.configure(state=tkinter.NORMAL)
+            
+        self.create_excel_entry.delete(0, 'end')
+        if len(self.excel_list) > 0:
+            self.replace_excel_combobox.set((self.excel_list)[0])
+            self.append_excel_combobox.set((self.excel_list)[0])
+        else:
+            self.replace_excel_combobox.set("沒有已存在的Excel")
+            self.append_excel_combobox.set("沒有已存在的Excel")
+        self.saving_value.set(value="default")
+        print("save setting: default")
                    
 class frame_PrintOrder(ctk.CTkFrame):
     def __init__(self, parent_frame, parent):
