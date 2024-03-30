@@ -5,6 +5,7 @@ operation\data.db
 *.xlsx
 operation/__pycache__
 operation/data.db
+operation/accounts.bin
 requirements_conda.txt
 requirements.txt
 \build
