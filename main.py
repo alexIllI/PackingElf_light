@@ -2,6 +2,7 @@ from operation.myacg_manager import MyAcg, ReturnType, AccountReturnType
 from operation.database_operation import DataBase, DBreturnType
 
 import customtkinter as ctk
+import tkinter
 from tkinter import ttk
 from tkinter import messagebox
 from PIL import Image
@@ -35,6 +36,8 @@ class App(ctk.CTk):
         self.current_id = 0
         self.current_time_name = datetime.now().strftime('Printed_Order_%Y_%m_%d')
         self.current_account = "子午計畫"
+        
+        self.save_excel_name = self.current_time_name
         
         #====================== Operation =========================
         self.myacg_manager = MyAcg()
@@ -100,8 +103,9 @@ class App(ctk.CTk):
         
         list_img_data = Image.open(resource_path("images\list_icon.png"))
         list_img = ctk.CTkImage(dark_image=list_img_data, light_image=list_img_data)
-        ctk.CTkButton(master=self.sidebar_frame, width=200, image=list_img, text="儲存管理", fg_color="transparent", font=("Iansui", 18), 
-                hover_color=self.dark3_color, anchor="center").pack(anchor="center", ipady=5, pady=(16, 0))
+        self.saveSetting_btn = ctk.CTkButton(master=self.sidebar_frame, width=200, image=list_img, text="儲存管理", fg_color="transparent", font=("Iansui", 18), 
+                hover_color=self.dark3_color, anchor="center", command=lambda: self.show_frame("frame_SaveSetting"))
+        self.saveSetting_btn.pack(anchor="center", ipady=5, pady=(16, 0))
 
         settings_img_data = Image.open(resource_path("images\settings_icon.png"))
         settings_img = ctk.CTkImage(dark_image=settings_img_data, light_image=settings_img_data)
@@ -116,7 +120,7 @@ class App(ctk.CTk):
         
         #========================== Other Pages ===========================
         self.frames = {}
-        for F in (frame_Account, frame_PrintOrder):
+        for F in (frame_Account, frame_PrintOrder, frame_SaveSetting):
             page_name = F.__name__
             frame = F(parent_frame=self.root_container, parent=self)
             self.frames[page_name] = frame
@@ -138,6 +142,10 @@ class App(ctk.CTk):
         elif page_name == "frame_Account":
             self.current_selected_btn = self.account_name_btn
             self.account_name_btn.configure(fg_color=self.dark1_color)
+            
+        elif page_name == "frame_SaveSetting":
+            self.current_selected_btn = self.saveSetting_btn
+            self.saveSetting_btn.configure(fg_color=self.dark1_color)
         
     def on_closing(self):
         if messagebox.askokcancel("退出包貨小精靈", "確定要退出? (會自動匯出本次所有貨單)"):
@@ -207,14 +215,14 @@ class frame_Account(ctk.CTkFrame):
         create_password_container.pack(fill="x", pady=(10, 0), padx=30)
          
         ctk.CTkLabel(master=create_password_container, text="密碼:      ", text_color="#fff", font=("Iansui", 24)).pack(side="left", padx=(13, 0), pady=5)
-        self.create_password_entry = ctk.CTkEntry(master=create_password_container, width=300, height = 40, font=("Iansui", 20), placeholder_text="請輸入密碼", border_color=parent.theme_color, border_width=2)
+        self.create_password_entry = ctk.CTkEntry(master=create_password_container, width=300, height = 40, font=("Iansui", 20), placeholder_text="請輸入密碼", border_color=parent.theme_color, border_width=2, show="*")
         self.create_password_entry.pack(side="left", padx=(13, 0), pady=5)
         
         create_password_check_container = ctk.CTkFrame(master=self, height=37.5, fg_color="transparent")
         create_password_check_container.pack(fill="x", pady=(10, 0), padx=30)
         
         ctk.CTkLabel(master=create_password_check_container, text="確認密碼: ", text_color="#fff", font=("Iansui", 24)).pack(side="left", padx=(13, 0), pady=5)
-        self.check_password_entry = ctk.CTkEntry(master=create_password_check_container, width=300, height = 40, font=("Iansui", 20), placeholder_text="請確認密碼", border_color=parent.theme_color, border_width=2)
+        self.check_password_entry = ctk.CTkEntry(master=create_password_check_container, width=300, height = 40, font=("Iansui", 20), placeholder_text="請確認密碼", border_color=parent.theme_color, border_width=2, show="*")
         self.check_password_entry.pack(side="left", padx=(13, 0), pady=5)
         self.check_password_entry.bind('<Return>', lambda event: self.create_new_account())
         
@@ -409,7 +417,131 @@ class frame_Account(ctk.CTkFrame):
                 self.account_name_btn.configure(text = self.current_account)
                 print(f"login to {self.current_account} success")
                 return
+
+class frame_SaveSetting(ctk.CTkFrame):
+    def __init__(self, parent_frame, parent):
+        ctk.CTkFrame.__init__(self, parent_frame, fg_color=parent.dark0_color, corner_radius=0)
+        
+        excel_extention = '.xlsx'
+        self.excel_list = [filename.rstrip(excel_extention) for filename in os.listdir("save") if filename.endswith(excel_extention)]
+        # self.excel_list.insert(0, parent.current_time_name)
+        self.saving_value = ctk.StringVar(value = "default")
+        #=============================== TITLE ======================================
+
+        title_frame = ctk.CTkFrame(master=self, fg_color="transparent")
+        title_frame.pack(anchor="n", fill="x",  padx=27, pady=(29, 0))
+        ctk.CTkLabel(master=title_frame, text="儲存管理", font=("Iansui", 32), text_color=parent.theme_color).pack(anchor="nw", side="left")
+        
+        #=============================== DEFAULT SAVE PATH ======================================
+        default_excel_container = ctk.CTkFrame(master=self, height=37.5, fg_color="transparent")
+        default_excel_container.pack(fill="x", pady=(50, 0), padx=30)
+
+        ctk.CTkLabel(master=default_excel_container, text=f"預設儲存的Excel: {parent.current_time_name}", text_color="#fff", font=("Iansui", 26)).pack(fill="x", pady=5)
+        
+        #=============================== CREATE NEW EXCEL ======================================
+        create_excel_container = ctk.CTkFrame(master=self, height=37.5, fg_color="transparent")
+        create_excel_container.pack(fill="x", pady=(50, 0), padx=30)
+
+        self.newname_checkbox = ctk.CTkCheckBox(create_excel_container, text=" 儲存至新建Excel: ", text_color="#fff", font=("Iansui", 24), command=lambda:self.checkbox_event(self.saving_value.get()), variable=self.saving_value, onvalue="newName_on", offvalue="newName_off")
+        self.newname_checkbox.pack(side="left")
+        self.create_excel_entry = ctk.CTkEntry(master=create_excel_container, width=300, height = 40, font=("Iansui", 20), placeholder_text="請輸入檔案名稱", border_color=parent.theme_color, border_width=2)
+        self.create_excel_entry.pack(side="left", padx=(13, 0), pady=5)
+        
+        #=============================== APPEND EXCEL ======================================
+        append_excel_container = ctk.CTkFrame(master=self, height=37.5, fg_color="transparent")
+        append_excel_container.pack(fill="x", pady=(15, 0), padx=30)
+        
+        self.append_checkbox = ctk.CTkCheckBox(append_excel_container, text=" 附加至已存在的Excel: ", text_color="#fff", font=("Iansui", 24), command=lambda:self.checkbox_event(self.saving_value.get()), variable=self.saving_value, onvalue="append_on", offvalue="append_off")
+        self.append_checkbox.pack(side="left")
+        
+        self.append_excel_combobox = ctk.CTkComboBox(master=append_excel_container, state="readonly", width=320, height = 40, font=("Iansui", 20), values=self.excel_list, button_color=parent.theme_color, border_color=parent.theme_color, 
+                    border_width=2, button_hover_color=parent.theme_color_dark, dropdown_hover_color=parent.theme_color_dark, dropdown_fg_color=parent.theme_color, dropdown_text_color=parent.dark0_color)
+        self.append_excel_combobox.pack(side="left", padx=(13, 0), pady=15)
+        if len(self.excel_list) > 0:
+            self.append_excel_combobox.set((self.excel_list)[0])
+        else:
+            self.append_excel_combobox.set("沒有已存在的Excel")
+        
+        #=============================== REPLACE EXCEL ======================================
+        replace_excel_container = ctk.CTkFrame(master=self, height=37.5, fg_color="transparent")
+        replace_excel_container.pack(fill="x", pady=(15, 0), padx=30)
+        
+        self.replace_checkbox = ctk.CTkCheckBox(replace_excel_container, text=" 覆蓋已存在的Excel: ", text_color="#fff", font=("Iansui", 24), command=lambda:self.checkbox_event(self.saving_value.get()), variable=self.saving_value, onvalue="replace_on", offvalue="replace_off")
+        self.replace_checkbox.pack(side="left")
+        
+        self.replace_excel_combobox = ctk.CTkComboBox(master=replace_excel_container, state="readonly", width=320, height = 40, font=("Iansui", 20), values=self.excel_list, button_color=parent.theme_color, border_color=parent.theme_color, 
+                    border_width=2, button_hover_color=parent.theme_color_dark, dropdown_hover_color=parent.theme_color_dark, dropdown_fg_color=parent.theme_color, dropdown_text_color=parent.dark0_color)
+        self.replace_excel_combobox.pack(side="left", padx=(13, 0), pady=15)
+        if len(self.excel_list) > 0:
+            self.replace_excel_combobox.set((self.excel_list)[0])
+        else:
+            self.replace_excel_combobox.set("沒有已存在的Excel")
             
+        #=============================== BUTTON SECTION ======================================
+        save_excel_btn_container = ctk.CTkFrame(master=self, height=37.5, fg_color="transparent")
+        save_excel_btn_container.pack(fill="x", pady=(35, 0), padx=30)
+        save_excel_btn_container.grid_rowconfigure(0, weight=1)
+        save_excel_btn_container.grid_columnconfigure(0, weight=1)
+        save_excel_btn_container.grid_columnconfigure(1, weight=1)
+        self.confirm_btn = ctk.CTkButton(master=save_excel_btn_container, width=75, height = 40, text="確認", font=("Iansui", 18), text_color=parent.dark0_color, 
+                                          fg_color=parent.theme_color, hover_color=parent.theme_color_dark, command=self.confirm_setting)
+        self.confirm_btn.grid(row=0, column=0, pady=(10,0), padx=10, sticky="e")
+        self.reset_btn = ctk.CTkButton(master=save_excel_btn_container, width=75, height = 40, text="恢復預設", font=("Iansui", 18), text_color=parent.dark0_color, 
+                                          fg_color=parent.theme_color, hover_color=parent.theme_color_dark, command=self.reset_setting)
+        self.reset_btn.grid(row=0, column=1, pady=(10,0), padx=10, sticky="w")
+        
+    # turn other checkbox into DISABLE    
+    def checkbox_event(self, checkbox_value):
+        print(f"checkbox toggled: {checkbox_value}")
+        if checkbox_value in ["newName_on", "append_on", "replace_on"]:
+            for C in (self.newname_checkbox, self.append_checkbox, self.replace_checkbox, self.create_excel_entry, self.append_excel_combobox, self.replace_excel_combobox):
+                if checkbox_value == "newName_on" and (C == self.newname_checkbox or C == self.create_excel_entry):
+                    continue
+                elif checkbox_value == "append_on" and (C == self.append_checkbox or C == self.append_excel_combobox):
+                    continue
+                elif checkbox_value == "replace_on" and (C == self.replace_checkbox or C == self.replace_excel_combobox):
+                    continue
+                C.configure(state=tkinter.DISABLED)
+        else:
+            for C in (self.newname_checkbox, self.append_checkbox, self.replace_checkbox, self.create_excel_entry, self.append_excel_combobox, self.replace_excel_combobox):
+                C.configure(state=tkinter.NORMAL)
+            self.saving_value.set(value="default")
+    
+    def confirm_setting(self):
+        command = self.saving_value.get()
+        if command == "default":
+            print("save setting: default")
+        elif command == "newName_on":
+            new_excel_name = self.create_excel_entry.get()
+            if not new_excel_name:
+                messagebox.showwarning("名稱錯誤", "請輸入欲創建的Excel名稱後, 再按下確認")
+                print("empty new excel name entry")
+                return
+            
+            print(f"save setting: save to new excel '{new_excel_name}'")
+        elif command == "append_on":
+            append_excel_name = self.append_excel_combobox.get()
+            print(f"saving setting: append to excel '{append_excel_name}'")
+        elif command == "replace_on":
+            replace_excel_name = self.replace_excel_combobox.get()
+            print(f"saving setting: replace excel '{replace_excel_name}'")
+    
+    def reset_setting(self):
+        for C in (self.newname_checkbox, self.append_checkbox, self.replace_checkbox):
+            C.deselect()
+        for C in (self.newname_checkbox, self.append_checkbox, self.replace_checkbox, self.create_excel_entry, self.append_excel_combobox, self.replace_excel_combobox):
+            C.configure(state=tkinter.NORMAL)
+            
+        self.create_excel_entry.delete(0, 'end')
+        if len(self.excel_list) > 0:
+            self.replace_excel_combobox.set((self.excel_list)[0])
+            self.append_excel_combobox.set((self.excel_list)[0])
+        else:
+            self.replace_excel_combobox.set("沒有已存在的Excel")
+            self.append_excel_combobox.set("沒有已存在的Excel")
+        self.saving_value.set(value="default")
+        print("save setting: default")
+                   
 class frame_PrintOrder(ctk.CTkFrame):
     def __init__(self, parent_frame, parent):
         ctk.CTkFrame.__init__(self, parent_frame, fg_color=parent.dark0_color, corner_radius=0)    
@@ -423,6 +555,10 @@ class frame_PrintOrder(ctk.CTkFrame):
         self.cur_time_name = parent.current_time_name
         self.cancel_color = parent.cancel_color
         self.close_color = parent.close_color
+        self.last_order = ""
+        
+        excel_extention = '.xlsx'
+        self.excel_list = [filename.rstrip(excel_extention) for filename in os.listdir("save") if filename.endswith(excel_extention)]
         
         #=============================== TITLE ======================================
 
@@ -435,11 +571,17 @@ class frame_PrintOrder(ctk.CTkFrame):
         storage_path_container = ctk.CTkFrame(master=self, height=37.5, fg_color="transparent")
         storage_path_container.pack(fill="x", pady=(35, 0), padx=30)
 
-        ctk.CTkLabel(master=storage_path_container, text="儲存位置: ", text_color="#fff", font=("Iansui", 24)).pack(side="left", padx=(13, 0), pady=5)
-        self.save_path_combobox = ctk.CTkComboBox(master=storage_path_container, state="readonly", width=200, height = 40, font=("Iansui", 20), values=["(現在沒功能)"], button_color=parent.theme_color, border_color=parent.theme_color, 
+        ctk.CTkLabel(master=storage_path_container, text="匯入紀錄: ", text_color="#fff", font=("Iansui", 24)).pack(side="left", padx=(13, 0), pady=5)
+        self.save_path_combobox = ctk.CTkComboBox(master=storage_path_container, state="readonly", width=320, height = 40, font=("Iansui", 20), values=self.excel_list, button_color=parent.theme_color, border_color=parent.theme_color, 
                     border_width=2, button_hover_color=parent.theme_color_dark, dropdown_hover_color=parent.theme_color_dark, dropdown_fg_color=parent.theme_color, dropdown_text_color=parent.dark0_color)
         self.save_path_combobox.pack(side="left", padx=(13, 0), pady=15)
-        self.save_path_combobox.set("(現在沒功能)")
+        if len(self.excel_list) > 0:
+            self.save_path_combobox.set((self.excel_list)[0])
+        else:
+            self.save_path_combobox.set("資料夾中無Excel")
+            
+        ctk.CTkButton(master=storage_path_container, width=75, height = 40, text="匯入", font=("Iansui", 18), text_color=parent.dark0_color, 
+                                          fg_color=parent.theme_color, hover_color=parent.theme_color_dark, command=self.importExcel).pack(anchor="ne", padx=(40, 0), pady=15, side="left")
 
         #=============================== PRINTER ORDER ======================================
 
@@ -459,6 +601,9 @@ class frame_PrintOrder(ctk.CTkFrame):
 
         ctk.CTkButton(master=prnit_order_container, width=75, height = 40, text="列印", font=("Iansui", 18), text_color=parent.dark0_color, 
                                           fg_color=parent.theme_color, hover_color=parent.theme_color_dark, command=self.printToprinter).pack(anchor="ne", padx=(40, 0), pady=15, side="left")
+        
+        ctk.CTkButton(master=prnit_order_container, width=75, height = 40, text="重印上一單", font=("Iansui", 18), text_color=parent.dark0_color, 
+                                          fg_color=parent.theme_color, hover_color=parent.theme_color_dark, command=self.printLastOrder).pack(anchor="ne", padx=(10, 0), pady=15, side="left")
         
         #=============================== ORDER COUNT ======================================
 
@@ -650,6 +795,107 @@ class frame_PrintOrder(ctk.CTkFrame):
                     self.success_order -= 1
                 self.total_order -= 1
                 self.update(self.view_status_enrty.get())
+    
+    def importExcel(self):
+        selected_excel = self.save_path_combobox.get() + ".xlsx"
+        pass
+                
+    def printLastOrder(self):
+        def print_cancel_close(_status:str, order):
+            self.total_order += 1
+            self.current_id += 1
+            self.label_total_order_number.configure(text = f"目前貨單總數: {self.total_order}")
+            cur_time = datetime.now().strftime('%H:%M:%S')
+            self.database.insert_data(self.current_id, cur_time, order, _status, self.cur_time_name)
+            if _status == "close":
+                self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, cur_time, order, "關轉", self.cur_time_name), tags = (_status,))
+            else:
+                self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, cur_time, order, "取消", self.cur_time_name), tags = (_status,))
+            self.update(self.view_status_enrty.get())
+        
+        def print_success(order):
+            self.total_order += 1
+            self.success_order += 1
+            self.current_id += 1
+            self.label_total_order_number.configure(text = f"目前貨單總數: {self.total_order}")
+            self.label_success_order_number.configure(text = f"成功列印貨單總數: {self.success_order}")
+            cur_time = datetime.now().strftime('%H:%M:%S')
+            self.database.insert_data(self.current_id, cur_time, order, 'success', self.cur_time_name)
+            self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, cur_time, order, '成功', self.cur_time_name))
+            self.update(self.view_status_enrty.get())
+            
+        if self.last_order == "":
+            messagebox.showwarning("無法重印上一單", "找不到上一單的資訊!")
+            print("no last order")
+            return
+        
+        self.database.delete_data(self.last_order)        
+        result = self.myacg_manager.printer(self.last_order)
+        
+        if result == ReturnType.MULTIPLE_TAB:
+            messagebox.showwarning("網頁自動化錯誤", "請開啟瀏覽器將買動漫以外的分頁關閉!")
+            print("meltiple tab detected")
+            
+        elif result == ReturnType.POPUP_UNSOLVED:
+            messagebox.showwarning("網頁自動化錯誤", "你可能沒有按'我知道了',打開買動漫,按下去")
+            print("popup unsolved")
+        
+        elif result == ReturnType.ALREADY_FINISH:
+            messagebox.showwarning("列印出貨單錯誤", "該訂單已出貨或已完成!")
+            print("already finished")
+            
+        elif result == ReturnType.ORDER_CANCELED:
+            messagebox.showwarning("取消", "此單已被取消!請至買動漫確認)")
+            print_cancel_close("cancel", self.last_order)
+            print("order canceled")
+        
+        elif result == ReturnType.ORDER_NOT_FOUND:
+            messagebox.showwarning("貨單後號碼錯誤", "沒有這一單!")
+            print("order not found")
+            
+        elif result == ReturnType.ORDER_NOT_FOUND_ERROR:
+            print("order not found raises error")
+            
+        elif result == ReturnType.CHECKBOX_NOT_FOUND:
+            messagebox.showwarning("網頁自動化錯誤", "找不到checkbox,可能沒有這一單,自己開買動漫看一下")
+            print("check box not found")
+            
+        elif result == ReturnType.CLICKING_CHECKBOX_ERROR:
+            messagebox.showwarning("網頁自動化錯誤", "無法勾選checkbox,可能沒有這一單,自己開買動漫看一下")
+            print("can't click checkbox")
+            
+        elif result == ReturnType.CLICKING_PRINT_ORDER_ERROR:
+            messagebox.showwarning("網頁自動化錯誤", "無法點選列印出貨單,可能沒有這一單,自己開買動漫看一下")
+            print("can't click print order")
+            
+        elif result == ReturnType.STORE_CLOSED:
+            messagebox.showwarning("寄送商店關轉", "該筆貨單寄送商店關轉中!")
+            print_cancel_close("close", self.last_order)
+            print("store closed")
+            
+        elif result == ReturnType.SWITCH_TAB_ERROR:
+            messagebox.showwarning("網頁自動化錯誤", "無法切換視窗(可能是關轉，去看買動漫，如果有我知道了按下去，不然我會當掉)")
+            print("switch tab error")
+            
+        elif result == ReturnType.LOAD_HTML_BODY_ERROR:
+            print("loading html body error")
+            
+        elif result == ReturnType.EXCUTE_PRINT_ERROR:
+            messagebox.showwarning("列印失敗", "列印失敗，不會記錄貨單!請再列印一次")
+            print("excute print error")
+            
+        elif result == ReturnType.CLOSED_TAB_ERROR:
+            messagebox.showwarning("網頁自動化錯誤", "成功列印出貨單，已經記錄在文件中。但關閉分頁時發生異常，請手動關閉'出貨單'分頁!!!!")
+            print_success(self.last_order)
+            print("closed tab error")
+            
+        elif result == ReturnType.SUCCESS:
+            print_success(self.last_order)
+            print("Success!")
+        
+        else:
+            print("Enum error!")
+            return
         
     def printToprinter(self):
         def print_cancel_close(_status:str, order):
@@ -694,6 +940,7 @@ class frame_PrintOrder(ctk.CTkFrame):
         
         current_order = f"PG{self.order_combobox.get()}{self.order_entry.get()}"
         self.order_entry.delete(0, 'end')
+        self.last_order = current_order
         
         #check if it is repeated order
         check_repeat_result =  self.database.search_order(current_order)
