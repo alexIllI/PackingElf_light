@@ -31,20 +31,20 @@ class DataBase():
         self.save_path = resource_path(save_path)
         
         self.connection = sqlite3.connect(resource_path(database_path))
-        table_create_query = f"CREATE TABLE IF NOT EXISTS {self.table_name} (table_id INT, time TEXT, order_number TEXT, status TEXT, save_status TEXT, record TEXT)"
+        table_create_query = f"CREATE TABLE IF NOT EXISTS {self.table_name} (table_id INT, time TEXT, order_number TEXT, status TEXT, invoice TEXT, save_status TEXT, record TEXT)"
         self.connection.execute(table_create_query)
         self.cursor = self.connection.cursor()
         
     def export_unrecorded_to_excel(self, current_table_name):
         try:
             # Fetch unrecorded orders from the table for specific columns
-            select_query = f"SELECT time, order_number, status FROM {current_table_name} WHERE record = ?"
+            select_query = f"SELECT time, order_number, status, invoice FROM {current_table_name} WHERE record = ?"
             unrecorded_data = self.cursor.execute(select_query, ('unrecorded',)).fetchall()
 
             if unrecorded_data:
-                new_data_df = pd.DataFrame(unrecorded_data, columns=['時間', '貨單號碼', '狀態'])
+                new_data_df = pd.DataFrame(unrecorded_data, columns=['時間', '貨單號碼', '狀態', '發票號碼'])
                 
-                 # Check if the file already exists
+                # Check if the file already exists
                 file_path = os.path.join(self.save_path, f"{current_table_name}.xlsx")
                 if os.path.exists(file_path):
                     # If the file exists, append the data to the first sheet
@@ -120,10 +120,10 @@ class DataBase():
         
         return DBreturnType.SUCCESS
         
-    def insert_data(self, table_id:int, time:str, order_number:str, status:str, save_status:str):
+    def insert_data(self, table_id:int, time:str, order_number:str, status:str, invoice:str, save_status:str):
         try:
-            data_insert_query = f"INSERT INTO {self.table_name} (table_id, time, order_number, status, save_status, record) VALUES (?, ?, ?, ?, ?, ?)"
-            data_insert_tuple = (table_id, time, order_number, status, save_status, "unrecorded")
+            data_insert_query = f"INSERT INTO {self.table_name} (table_id, time, order_number, status, invoice, save_status, record) VALUES (?, ?, ?, ?, ?, ?, ?)"
+            data_insert_tuple = (table_id, time, order_number, status, invoice, save_status, "unrecorded")
             self.cursor.execute(data_insert_query, data_insert_tuple)
             self.connection.commit()
             print("Data inserted to database successfully!")
