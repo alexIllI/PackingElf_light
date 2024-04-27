@@ -31,9 +31,6 @@ class App(ctk.CTk):
             print("add font error")
         
         #============================ VARIABLES ==================================
-        self.total_order = 0
-        self.success_order = 0
-        self.current_id = 0
         self.current_time_name = datetime.now().strftime('Printed_Order_%Y_%m_%d')
         self.current_account = "子午計畫"
         
@@ -41,7 +38,7 @@ class App(ctk.CTk):
         
         #====================== Operation =========================
         self.myacg_manager = MyAcg()
-        self.database = DataBase(self.current_time_name, 'operation\\data.db', 'save')  
+        self.database = DataBase(self.current_time_name, 'save')  
         while True:
             check_result = self.database.check_previous_records(self.current_time_name, (datetime.now()-timedelta(days=1)).strftime('Printed_Order_%Y_%m_%d'))
             if check_result == DBreturnType.SUCCESS:
@@ -70,7 +67,7 @@ class App(ctk.CTk):
         
         #========================= Root Frame ============================
         ctk.CTk.__init__(self, *args, **kwargs)
-        self.geometry("900x600")
+        self.geometry("1000x600")
         ctk.set_appearance_mode("dark")
         self.resizable(0,0)
         self.title("包貨小精靈")
@@ -549,50 +546,39 @@ class frame_PrintOrder(ctk.CTkFrame):
         self.myacg_manager = parent.myacg_manager
         self.database = parent.database
         
-        self.total_order = parent.total_order
-        self.success_order = parent.success_order
-        self.current_id = parent.current_id
         self.cur_time_name = parent.current_time_name
         self.cancel_color = parent.cancel_color
         self.close_color = parent.close_color
         self.last_order = ""
-        
-        excel_extention = '.xlsx'
-        self.excel_list = [filename.rstrip(excel_extention) for filename in os.listdir("save") if filename.endswith(excel_extention)]
-        
+        self.table_list = self.database.get_recent_tables()
         #=============================== TITLE ======================================
 
         title_frame = ctk.CTkFrame(master=self, fg_color="transparent")
         title_frame.pack(anchor="n", fill="x",  padx=27, pady=(29, 0))
         ctk.CTkLabel(master=title_frame, text="列印出貨單", font=("Iansui", 32), text_color=parent.theme_color).pack(anchor="nw", side="left")
-        
-        #=============================== STORAGE PATH ======================================
 
-        storage_path_container = ctk.CTkFrame(master=self, height=37.5, fg_color="transparent")
-        storage_path_container.pack(fill="x", pady=(10, 0), padx=30)
+        #=============================== SELECT TABLE ======================================
 
-        ctk.CTkLabel(master=storage_path_container, text="匯入紀錄: ", text_color="#fff", font=("Iansui", 24)).pack(side="left", padx=(13, 0), pady=5)
-        self.save_path_combobox = ctk.CTkComboBox(master=storage_path_container, state="readonly", width=320, height = 40, font=("Iansui", 20), values=self.excel_list, button_color=parent.theme_color, border_color=parent.theme_color, 
-                    border_width=2, button_hover_color=parent.theme_color_dark, dropdown_hover_color=parent.theme_color_dark, dropdown_fg_color=parent.theme_color, dropdown_text_color=parent.dark0_color)
-        self.save_path_combobox.pack(side="left", padx=(13, 0), pady=15)
-        if len(self.excel_list) > 0:
-            self.save_path_combobox.set((self.excel_list)[0])
-        else:
-            self.save_path_combobox.set("資料夾中無Excel")
-            
-        ctk.CTkButton(master=storage_path_container, width=75, height = 40, text="匯入", font=("Iansui", 18), text_color=parent.dark0_color, 
-                                          fg_color=parent.theme_color, hover_color=parent.theme_color_dark, command=self.importExcel).pack(anchor="ne", padx=(40, 0), pady=15, side="left")
+        store_table_container = ctk.CTkFrame(master=self, fg_color="transparent")
+        store_table_container.pack(fill="x", pady=(10, 0), padx=30)
+
+        ctk.CTkLabel(master=store_table_container, text="選擇紀錄位置: ", text_color="#fff", font=("Iansui", 24)).pack(side="left", padx=(13, 0), pady=5)
+        self.store_table_combobox = ctk.CTkComboBox(master=store_table_container, state="readonly", width=320, height = 40, font=("Iansui", 20), values=self.table_list, button_color=parent.theme_color, border_color=parent.theme_color, 
+                    border_width=2, button_hover_color=parent.theme_color_dark, dropdown_hover_color=parent.theme_color_dark, 
+                    dropdown_fg_color=parent.theme_color, dropdown_text_color=parent.dark0_color, command= lambda value: self.update_table(self.view_status_enrty.get(), value))
+        self.store_table_combobox.pack(side="left", padx=(13, 0), pady=15)
+        self.store_table_combobox.set(self.table_list[0])
 
         #=============================== INVOICE SCANNER ======================================
 
         invoice_container = ctk.CTkFrame(master=self, fg_color="transparent")
         invoice_container.pack(fill="x", pady=(10, 0), padx=30)
 
-        ctk.CTkLabel(master=invoice_container, text="發票編號", text_color="#fff", font=("Iansui", 24)).pack(side="left", padx=(13, 0), pady=5)
+        ctk.CTkLabel(master=invoice_container, text="發票編號: ", text_color="#fff", font=("Iansui", 24)).pack(side="left", padx=(13, 0), pady=5)
         
         self.vcmd = (self.register(self.on_validate), '%P')
         self.invoice_entry = ctk.CTkEntry(master=invoice_container, validate="key", validatecommand=self.vcmd, width=225, height = 40, font=("Iansui", 20), border_color=parent.theme_color, border_width=2)
-        self.invoice_entry.pack(side="left", padx=(13, 0), pady=5)
+        self.invoice_entry.pack(side="left", padx=(60, 0), pady=5)
         
         # hotkey binding
         self.invoice_entry.bind('<Return>', lambda event: self.switch_to_order_entry()) 
@@ -608,16 +594,16 @@ class frame_PrintOrder(ctk.CTkFrame):
         self.order_combobox.pack(side="left", padx=(13, 0), pady=15)
         self.order_combobox.set("019")
         self.order_entry = ctk.CTkEntry(master=prnit_order_container, width=225, height = 40, font=("Iansui", 20), placeholder_text="請輸入貨單後五碼", border_color=parent.theme_color, border_width=2)
-        self.order_entry.pack(side="left", padx=(13, 0), pady=5)
+        self.order_entry.pack(side="left", padx=(23, 0), pady=5)
         
         # hotkey binding
         self.order_entry.bind('<Return>', lambda event: self.printToprinter())
 
         ctk.CTkButton(master=prnit_order_container, width=75, height = 40, text="列印", font=("Iansui", 18), text_color=parent.dark0_color, 
-                                          fg_color=parent.theme_color, hover_color=parent.theme_color_dark, command=self.printToprinter).pack(anchor="ne", padx=(40, 0), pady=15, side="left")
+                                          fg_color=parent.theme_color, hover_color=parent.theme_color_dark, command=self.printToprinter).pack(anchor="ne", padx=(70, 0), pady=15, side="left")
         
         ctk.CTkButton(master=prnit_order_container, width=75, height = 40, text="重印上一單", font=("Iansui", 18), text_color=parent.dark0_color, 
-                                          fg_color=parent.theme_color, hover_color=parent.theme_color_dark, command=self.printLastOrder).pack(anchor="ne", padx=(10, 0), pady=15, side="left")
+                                          fg_color=parent.theme_color, hover_color=parent.theme_color_dark, command=self.printLastOrder).pack(anchor="ne", padx=(10, 40), pady=15, side="left")
         
         #=============================== ORDER COUNT ======================================
 
@@ -647,11 +633,16 @@ class frame_PrintOrder(ctk.CTkFrame):
         
         ctk.CTkButton(master=search_container, width=75, height = 30, text="搜尋", font=("Iansui", 16), text_color=parent.dark0_color, fg_color=parent.theme_color, hover_color=parent.theme_color_dark, command=self.search_order).pack(anchor="ne", padx=(13, 0), pady=5, side="left")
         ctk.CTkButton(master=search_container, width=75, height = 30, text="刪除", font=("Iansui", 16), text_color=parent.dark0_color, fg_color=parent.theme_color, hover_color=parent.theme_color_dark, command=self.btn_delete_items).pack(anchor="ne", padx=(13, 0), pady=5, side="left")
+        
+        self.show_recorded_checkbox = ctk.CTkCheckBox(search_container, text="顯示過去紀錄", text_color="#fff", font=("Iansui", 16),
+                                                      command=lambda: self.update_table(self.view_status_enrty.get(), self.store_table_combobox.get()))
+        self.show_recorded_checkbox.pack(side="right",padx=15, pady=5)
+        
         self.view_status_enrty = ctk.CTkComboBox(master=search_container, state="readonly", width=105, height = 30, font=("Iansui", 16), values=["顯示全部", "成功出貨", "關轉", "取消"], button_color=parent.theme_color, border_color=parent.theme_color, 
-                    border_width=2, button_hover_color=parent.theme_color_dark, dropdown_hover_color=parent.theme_color_dark, dropdown_fg_color=parent.theme_color, dropdown_text_color=parent.dark0_color, command=self.update)
+                    border_width=2, button_hover_color=parent.theme_color_dark, dropdown_hover_color=parent.theme_color_dark, dropdown_fg_color=parent.theme_color, dropdown_text_color=parent.dark0_color, command= lambda value: self.update_table(value, self.store_table_combobox.get()))
         self.view_status_enrty.pack(side="right", padx=(13, 0), pady=5)
         self.view_status_enrty.set("顯示全部")
-
+        
         #============================ TABLE ============================             
 
         table_frame = ctk.CTkFrame(master=self, fg_color="transparent")
@@ -701,10 +692,7 @@ class frame_PrintOrder(ctk.CTkFrame):
             if messagebox.askokcancel("刪除貨單", f"確定要刪除 {self.printed_order_table.item(self.printed_order_table.selection())['values'][2]} ? (刪除後不可復原)"):
                 print(f"delete {self.printed_order_table.item(self.printed_order_table.selection())['values'][2]}")
                 self.database.delete_data(self.printed_order_table.item(self.printed_order_table.selection())['values'][2])
-                if self.printed_order_table.item(self.printed_order_table.selection())['values'][3] == "成功":
-                    self.success_order -= 1
-                self.total_order -= 1
-                self.update(self.view_status_enrty.get())
+                self.update_table(self.view_status_enrty.get(), self.store_table_combobox.get())
                 
         def deselect_items(_):
             self.printed_order_table.selection_remove(*self.printed_order_table.selection())
@@ -714,17 +702,22 @@ class frame_PrintOrder(ctk.CTkFrame):
         self.printed_order_table.bind('<Delete>', delete_items)
         self.printed_order_table.bind('<Escape>', deselect_items)
     
-    def update(self, status):
+    def update_table(self, status, table_name):
         self.printed_order_table.delete(*self.printed_order_table.get_children())
+        record = 'unrecorded'
+        show_recorded = self.show_recorded_checkbox.get()
+        if show_recorded:
+            record = 'recorded'
+            
         if status == "顯示全部":
-            datas = self.database.fetch_all_unrecorded("all")
+            datas = self.database.fetch_table_data("all", record, table_name)
         elif status == "成功出貨":
-            datas = self.database.fetch_all_unrecorded('success')
+            datas = self.database.fetch_table_data('success', record, table_name)
         elif status == "關轉":
-            datas = self.database.fetch_all_unrecorded('close')
+            datas = self.database.fetch_table_data('close', record, table_name)
         elif status == "取消":
-            datas = self.database.fetch_all_unrecorded('cancel')
-        
+            datas = self.database.fetch_table_data('cancel', record, table_name)
+                
         for data in datas:
             if data[3] == 'success':
                 self.printed_order_table.insert(parent = '', index = 0, values = (data[0], data[1], data[2], "成功", data[4], data[5]))
@@ -732,9 +725,10 @@ class frame_PrintOrder(ctk.CTkFrame):
                 self.printed_order_table.insert(parent = '', index = 0, values = (data[0], data[1], data[2], "關轉", data[4], data[5]), tags = ("close",))
             if data[3] == 'cancel':
                 self.printed_order_table.insert(parent = '', index = 0, values = (data[0], data[1], data[2], "取消", data[4], data[5]), tags = ("cancel",))
-                
-        self.label_total_order_number.configure(text = f"目前貨單總數: {self.total_order}")
-        self.label_success_order_number.configure(text = f"成功列印貨單總數: {self.success_order}")
+        
+        order_numbers = self.database.count_records(table_name, show_recorded) 
+        self.label_total_order_number.configure(text = f"目前貨單總數: {order_numbers[0]}")
+        self.label_success_order_number.configure(text = f"成功列印貨單總數: {order_numbers[1]}")
                 
     def search_order(self):
         if not self.search_entry.get():
@@ -755,6 +749,8 @@ class frame_PrintOrder(ctk.CTkFrame):
         if result == DBreturnType.ORDER_NOT_FOUND:
             messagebox.showwarning("搜尋貨單結果", "搜尋的貨單不存在!")
             print(f"search for {order_number} result doesn't exist")
+        elif result == DBreturnType.SEARCH_ORDER_ERROR:
+            messagebox.showwarning("刪除貨單錯誤", "發生意料外的狀況, 請紀錄並回報")
         else:
             if result[5] == "unrecorded":
                 self.printed_order_table.selection_remove(self.printed_order_table.selection())
@@ -780,11 +776,8 @@ class frame_PrintOrder(ctk.CTkFrame):
                 
                 if messagebox.askokcancel("刪除貨單", f"確定要刪除 {self.printed_order_table.item(self.printed_order_table.selection())['values'][2]} ? (刪除後不可復原)"):
                     print(f"delete {self.printed_order_table.item(self.printed_order_table.selection())['values'][2]}")
-                    if self.printed_order_table.item(self.printed_order_table.selection())['values'][3] == "成功":
-                        self.success_order -= 1
                     self.database.delete_data(self.printed_order_table.item(self.printed_order_table.selection())['values'][2])
-                    self.total_order -= 1
-                    self.update(self.view_status_enrty.get())
+                    self.update_table(self.view_status_enrty.get(), self.store_table_combobox.get())
                     return
             else:
                 messagebox.showwarning("刪除貨單結果", "老哥，先輸入再刪除好嗎")
@@ -804,17 +797,12 @@ class frame_PrintOrder(ctk.CTkFrame):
             if result == DBreturnType.ORDER_NOT_FOUND:
                 messagebox.showwarning("刪除貨單結果", "欲刪除的貨單不存在!")
                 print("the order trying to delete doesn't exist")
+            elif result == DBreturnType.SEARCH_ORDER_ERROR:
+                messagebox.showwarning("刪除貨單錯誤", "發生意料外的狀況, 請紀錄並回報")
             else:
                 self.database.delete_data(self.search_entry.get())
                 self.search_entry.delete(0, 'end')
-                if result[3] == 'success':
-                    self.success_order -= 1
-                self.total_order -= 1
-                self.update(self.view_status_enrty.get())
-    
-    def importExcel(self):
-        selected_excel = self.save_path_combobox.get() + ".xlsx"
-        pass
+                self.update_table(self.view_status_enrty.get(), self.store_table_combobox.get())
     
     # Validate if the input is english and number or not        
     def on_validate(self, P):
@@ -839,27 +827,14 @@ class frame_PrintOrder(ctk.CTkFrame):
                         
     def printLastOrder(self):
         def print_cancel_close(_status:str, order, invoice):
-            self.total_order += 1
-            self.current_id += 1
-            self.label_total_order_number.configure(text = f"目前貨單總數: {self.total_order}")
             cur_time = datetime.now().strftime('%H:%M:%S')
-            self.database.insert_data(self.current_id, cur_time, order, _status, invoice, self.cur_time_name)
-            if _status == "close":
-                self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, cur_time, order, "關轉", self.cur_time_name), tags = (_status,))
-            else:
-                self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, cur_time, order, "取消", self.cur_time_name), tags = (_status,))
-            self.update(self.view_status_enrty.get())
+            self.database.insert_data(cur_time, order, _status, invoice, self.cur_time_name)
+            self.update_table(self.view_status_enrty.get(), self.store_table_combobox.get())
         
         def print_success(order, invoice):
-            self.total_order += 1
-            self.success_order += 1
-            self.current_id += 1
-            self.label_total_order_number.configure(text = f"目前貨單總數: {self.total_order}")
-            self.label_success_order_number.configure(text = f"成功列印貨單總數: {self.success_order}")
             cur_time = datetime.now().strftime('%H:%M:%S')
-            self.database.insert_data(self.current_id, cur_time, order, 'success', invoice, self.cur_time_name)
-            self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, cur_time, order, '成功', self.cur_time_name))
-            self.update(self.view_status_enrty.get())
+            self.database.insert_data(cur_time, order, 'success', invoice, self.cur_time_name)
+            self.update_table(self.view_status_enrty.get(), self.store_table_combobox.get())
             
         if self.last_order == "":
             messagebox.showwarning("無法重印上一單", "找不到上一單的資訊!")
@@ -944,27 +919,14 @@ class frame_PrintOrder(ctk.CTkFrame):
             return
         
         def print_cancel_close(_status:str, order, invoice):
-            self.total_order += 1
-            self.current_id += 1
-            self.label_total_order_number.configure(text = f"目前貨單總數: {self.total_order}")
             cur_time = datetime.now().strftime('%H:%M:%S')
-            self.database.insert_data(self.current_id, cur_time, order, _status, invoice, self.cur_time_name)
-            if _status == "close":
-                self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, cur_time, order, "關轉", invoice, self.cur_time_name), tags = (_status,))
-            else:
-                self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, cur_time, order, "取消", invoice, self.cur_time_name), tags = (_status,))
-            self.update(self.view_status_enrty.get())
+            self.database.insert_data(cur_time, order, _status, invoice, self.cur_time_name)
+            self.update_table(self.view_status_enrty.get(), self.store_table_combobox.get())
         
         def print_success(order, invoice):
-            self.total_order += 1
-            self.success_order += 1
-            self.current_id += 1
-            self.label_total_order_number.configure(text = f"目前貨單總數: {self.total_order}")
-            self.label_success_order_number.configure(text = f"成功列印貨單總數: {self.success_order}")
             cur_time = datetime.now().strftime('%H:%M:%S')
-            self.database.insert_data(self.current_id, cur_time, order, 'success', invoice, self.cur_time_name)
-            self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, cur_time, order, '成功', invoice, self.cur_time_name))
-            self.update(self.view_status_enrty.get())
+            self.database.insert_data(cur_time, order, 'success', invoice, self.cur_time_name)
+            self.update_table(self.view_status_enrty.get(), self.store_table_combobox.get())
         
         if not self.order_combobox.get():
             messagebox.showwarning("沒有選擇輸入前綴", "請選擇貨單PG後數字!")
@@ -1001,6 +963,9 @@ class frame_PrintOrder(ctk.CTkFrame):
         check_repeat_result =  self.database.search_order(current_order)
         if check_repeat_result == DBreturnType.ORDER_NOT_FOUND:
             pass
+        elif check_repeat_result == DBreturnType.SEARCH_ORDER_ERROR:
+            messagebox.showwarning("printToprinter error", "發生意料外的狀況, 請紀錄並回報")
+            return
         elif check_repeat_result[5] == "unrecorded":
             messagebox.showwarning("貨單後號碼錯誤", "出貨單重複!如果想重印這一單, 請先將下方同樣貨單編號的紀錄刪除")
             print(f"repeat unrecorded order: {current_order}")
