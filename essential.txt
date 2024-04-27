@@ -1,1 +1,5 @@
 mysql password: Meridian0723
+
+ALTER USER 'root'@'MSI' IDENTIFIED BY 'your_new_password';
+GRANT ALL PRIVILEGES ON *.* TO 'root'@'MSI' WITH GRANT OPTION;
+FLUSH PRIVILEGES;
