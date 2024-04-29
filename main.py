@@ -9,8 +9,8 @@ from PIL import Image
 import pyglet
 import sys
 import os
+import datetime
 
-from datetime import datetime, timedelta
 from configparser import ConfigParser
 
 def resource_path(relative_path):
@@ -31,25 +31,25 @@ class App(ctk.CTk):
             print("add font error")
         
         #============================ VARIABLES ==================================
-        self.current_time_name = datetime.now().strftime('Printed_Order_%Y_%m_%d')
         self.current_account = "子午計畫"
-        
-        self.save_excel_name = self.current_time_name
         
         #====================== Operation =========================
         self.myacg_manager = MyAcg()
-        self.database = DataBase(self.current_time_name, 'save')  
+        self.database = DataBase('save')  
         while True:
-            check_result = self.database.check_previous_records(self.current_time_name, (datetime.now()-timedelta(days=1)).strftime('Printed_Order_%Y_%m_%d'))
+            check_result = self.database.check_previous_records()
             if check_result == DBreturnType.SUCCESS:
                 break
-            elif check_result == DBreturnType.PERMISSION_ERROR:
+            elif check_result == DBreturnType.CHECK_PREVIOUS_RECORD_ERROR:
                 print("excel file is opend, should be closed while checking previous records")
-                messagebox.showwarning("匯出貨單錯誤", f"Excel在開啟時無法匯出, 請關閉紀錄貨單的Excel: {self.current_time_name}.xlsx 後, 再按下確定")
+                messagebox.showwarning("匯出貨單錯誤", "發生意料之外的狀況, 請關閉應用程式並記錄Error log")
             elif check_result == DBreturnType.EXPORT_UNRECORDED_ERROR:
                 print("excel unrecord data error")
                 messagebox.showwarning("匯出貨單錯誤", "發生錯誤，檢測到有未紀錄的貨單，但無法匯出")
                 break
+            elif check_result != None:
+                print("excel file is opend, should be closed while checking previous records")
+                messagebox.showwarning("匯出貨單錯誤", f"Excel在開啟時無法匯出, 請關閉紀錄貨單的Excel: {check_result}.xlsx 後, 再按下確定")
         
         #====================== Config ===============================
         config = ConfigParser()
@@ -152,10 +152,10 @@ class App(ctk.CTk):
                 if close_result == DBreturnType.CLOSE_AND_SAVE_ERROR:
                     messagebox.showwarning("匯出貨單時發生錯誤", "匯出貨單時發生錯誤, 包貨紀錄將不會匯出至excel!\n(下次啟動應用程式時將會嘗試匯出至excel)")
                     break
-                elif close_result == DBreturnType.PERMISSION_ERROR:
-                    messagebox.showwarning("匯出貨單時發生錯誤", "匯出貨單時發生錯誤, 請先將儲存貨單的excel關閉!")
                 elif close_result == DBreturnType.SUCCESS:
                     break
+                elif close_result != None:
+                    messagebox.showwarning("匯出貨單時發生錯誤", f"匯出貨單時發生錯誤, 請先將儲存貨單的excel: {close_result} 關閉!")
             
             self.destroy()
             print("close app")
@@ -421,7 +421,6 @@ class frame_SaveSetting(ctk.CTkFrame):
         
         excel_extention = '.xlsx'
         self.excel_list = [filename.rstrip(excel_extention) for filename in os.listdir("save") if filename.endswith(excel_extention)]
-        # self.excel_list.insert(0, parent.current_time_name)
         self.saving_value = ctk.StringVar(value = "default")
         #=============================== TITLE ======================================
 
@@ -433,7 +432,7 @@ class frame_SaveSetting(ctk.CTkFrame):
         default_excel_container = ctk.CTkFrame(master=self, height=37.5, fg_color="transparent")
         default_excel_container.pack(fill="x", pady=(50, 0), padx=30)
 
-        ctk.CTkLabel(master=default_excel_container, text=f"預設儲存的Excel: {parent.current_time_name}", text_color="#fff", font=("Iansui", 26)).pack(fill="x", pady=5)
+        ctk.CTkLabel(master=default_excel_container, text=f"預設儲存的Excel: 000", text_color="#fff", font=("Iansui", 26)).pack(fill="x", pady=5)
         
         #=============================== CREATE NEW EXCEL ======================================
         create_excel_container = ctk.CTkFrame(master=self, height=37.5, fg_color="transparent")
@@ -546,11 +545,12 @@ class frame_PrintOrder(ctk.CTkFrame):
         self.myacg_manager = parent.myacg_manager
         self.database = parent.database
         
-        self.cur_time_name = parent.current_time_name
         self.cancel_color = parent.cancel_color
         self.close_color = parent.close_color
         self.last_order = ""
-        self.table_list = self.database.get_recent_tables()
+        self.table_list = self.database.get_output_excel_options()
+        if datetime.datetime.now().strftime("Printed_Order_%Y_%m_%d") not in self.table_list:
+            self.table_list.insert(0, datetime.datetime.now().strftime("Printed_Order_%Y_%m_%d"))
         #=============================== TITLE ======================================
 
         title_frame = ctk.CTkFrame(master=self, fg_color="transparent")
@@ -657,7 +657,7 @@ class frame_PrintOrder(ctk.CTkFrame):
         printed_order_table_style.configure("Treeview", rowheight = 50, font=("Iansui", 14), background="#fff")
         printed_order_table_style.layout("Treeview", [('Treeview.treearea', {'sticky': 'nswe'})])
         
-        self.printed_order_table = ttk.Treeview(table_frame, columns = ('id', 'time', 'order', 'status', 'invoice', 'save_status'), style="Treeview", show = 'headings', yscrollcommand=tree_scroll.set)
+        self.printed_order_table = ttk.Treeview(table_frame, columns = ('id', 'time', 'order', 'status', 'invoice', 'output_excel'), style="Treeview", show = 'headings', yscrollcommand=tree_scroll.set)
         self.printed_order_table.column("# 1", anchor="center",width=30)
         self.printed_order_table.column("# 2", anchor="center",width=145)
         self.printed_order_table.column("# 3", anchor="center")
@@ -669,7 +669,7 @@ class frame_PrintOrder(ctk.CTkFrame):
         self.printed_order_table.heading('order', text = '貨單編號')
         self.printed_order_table.heading('status', text = '狀態')
         self.printed_order_table.heading('invoice', text = '發票號碼')
-        self.printed_order_table.heading('save_status', text = '儲存位置')
+        self.printed_order_table.heading('output_excel', text = '儲存位置')
         self.printed_order_table.pack(fill = 'both', expand = True)
         
         self.printed_order_table.tag_configure('cancel', background=parent.cancel_color)
@@ -726,7 +726,7 @@ class frame_PrintOrder(ctk.CTkFrame):
             if data[3] == 'cancel':
                 self.printed_order_table.insert(parent = '', index = 0, values = (data[0], data[1], data[2], "取消", data[4], data[5]), tags = ("cancel",))
         
-        order_numbers = self.database.count_records(table_name, show_recorded) 
+        order_numbers = self.database.count_records(self.store_table_combobox.get(), show_recorded) 
         self.label_total_order_number.configure(text = f"目前貨單總數: {order_numbers[0]}")
         self.label_success_order_number.configure(text = f"成功列印貨單總數: {order_numbers[1]}")
                 
@@ -827,13 +827,11 @@ class frame_PrintOrder(ctk.CTkFrame):
                         
     def printLastOrder(self):
         def print_cancel_close(_status:str, order, invoice):
-            cur_time = datetime.now().strftime('%H:%M:%S')
-            self.database.insert_data(cur_time, order, _status, invoice, self.cur_time_name)
+            self.database.insert_data(order, _status, invoice, self.store_table_combobox.get())
             self.update_table(self.view_status_enrty.get(), self.store_table_combobox.get())
         
         def print_success(order, invoice):
-            cur_time = datetime.now().strftime('%H:%M:%S')
-            self.database.insert_data(cur_time, order, 'success', invoice, self.cur_time_name)
+            self.database.insert_data(order, 'success', invoice, self.store_table_combobox.get())
             self.update_table(self.view_status_enrty.get(), self.store_table_combobox.get())
             
         if self.last_order == "":
@@ -919,13 +917,11 @@ class frame_PrintOrder(ctk.CTkFrame):
             return
         
         def print_cancel_close(_status:str, order, invoice):
-            cur_time = datetime.now().strftime('%H:%M:%S')
-            self.database.insert_data(cur_time, order, _status, invoice, self.cur_time_name)
+            self.database.insert_data(order, _status, invoice, self.store_table_combobox.get())
             self.update_table(self.view_status_enrty.get(), self.store_table_combobox.get())
         
         def print_success(order, invoice):
-            cur_time = datetime.now().strftime('%H:%M:%S')
-            self.database.insert_data(cur_time, order, 'success', invoice, self.cur_time_name)
+            self.database.insert_data(order, 'success', invoice, self.store_table_combobox.get())
             self.update_table(self.view_status_enrty.get(), self.store_table_combobox.get())
         
         if not self.order_combobox.get():
