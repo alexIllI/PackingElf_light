@@ -549,8 +549,7 @@ class frame_PrintOrder(ctk.CTkFrame):
         self.close_color = parent.close_color
         self.last_order = ""
         self.table_list = self.database.get_output_excel_options()
-        if datetime.datetime.now().strftime("Printed_Order_%Y_%m_%d") not in self.table_list:
-            self.table_list.insert(0, datetime.datetime.now().strftime("Printed_Order_%Y_%m_%d"))
+
         #=============================== TITLE ======================================
 
         title_frame = ctk.CTkFrame(master=self, fg_color="transparent")
@@ -704,10 +703,10 @@ class frame_PrintOrder(ctk.CTkFrame):
     
     def update_table(self, status, table_name):
         self.printed_order_table.delete(*self.printed_order_table.get_children())
-        record = 'unrecorded'
+        record = False
         show_recorded = self.show_recorded_checkbox.get()
         if show_recorded:
-            record = 'recorded'
+            record = True
             
         if status == "顯示全部":
             datas = self.database.fetch_table_data("all", record, table_name)
@@ -726,7 +725,7 @@ class frame_PrintOrder(ctk.CTkFrame):
             if data[3] == 'cancel':
                 self.printed_order_table.insert(parent = '', index = 0, values = (data[0], data[1], data[2], "取消", data[4], data[5]), tags = ("cancel",))
         
-        order_numbers = self.database.count_records(self.store_table_combobox.get(), show_recorded) 
+        order_numbers = self.database.count_records(self.store_table_combobox.get(), record) 
         self.label_total_order_number.configure(text = f"目前貨單總數: {order_numbers[0]}")
         self.label_success_order_number.configure(text = f"成功列印貨單總數: {order_numbers[1]}")
                 
@@ -752,17 +751,21 @@ class frame_PrintOrder(ctk.CTkFrame):
         elif result == DBreturnType.SEARCH_ORDER_ERROR:
             messagebox.showwarning("刪除貨單錯誤", "發生意料外的狀況, 請紀錄並回報")
         else:
-            if result[5] == "unrecorded":
+            try:
                 self.printed_order_table.selection_remove(self.printed_order_table.selection())
                 for child in self.printed_order_table.get_children():
                     if order_number in self.printed_order_table.item(child)['values'][2]:
                         print(f"find {self.printed_order_table.item(child)['values'][2]} within treeview, id: {result[0]}")
                         self.printed_order_table.selection_set(child)
-                        messagebox.showinfo("搜尋貨單結果", f"貨單編號: {order_number}\nID: {result[0]}\n狀態: {result[3]}\n發票編號: {result[4]}\n儲存位置: {result[5]}")
-                        return
+            except:
+                print(f"current table do not contain children: {order_number}")
+                        
+            if result[6] == "unrecorded":
+                messagebox.showinfo("搜尋貨單結果", f"列印時間: {result[1].strftime('%m/%d %H:%M:%S')}\nID: {result[0]}\n狀態: {result[3]}\n發票編號: {result[4]}\n儲存位置: {result[5]}\n紀錄狀態: 尚未儲存至Excel")
+                return
             else:
-                messagebox.showwarning("搜尋貨單結果", "資料庫中有紀錄這筆貨單，但不是在本次應用程式執行後紀錄，因此不會顯示在下方表格!")
-                print(f"search for {order_number} already exist, but is recorded")
+                messagebox.showinfo("搜尋貨單結果", f"列印時間: {result[1].strftime('%m/%d %H:%M:%S')}\nID: {result[0]}\n狀態: {result[3]}\n發票編號: {result[4]}\n儲存位置: {result[5]}\n紀錄狀態: 已儲存至Excel")
+                return
         
     def btn_delete_items(self):
         #if search entry is empty
@@ -956,18 +959,17 @@ class frame_PrintOrder(ctk.CTkFrame):
         self.invoice_entry.focus_set()
         
         #check if it is repeated order
-        check_repeat_result =  self.database.search_order(current_order)
-        if check_repeat_result == DBreturnType.ORDER_NOT_FOUND:
-            pass
-        elif check_repeat_result == DBreturnType.SEARCH_ORDER_ERROR:
-            messagebox.showwarning("printToprinter error", "發生意料外的狀況, 請紀錄並回報")
+        check_repeat_result =  self.database.check_repeated(current_order)
+        if check_repeat_result == DBreturnType.SEARCH_ORDER_ERROR:
+            messagebox.showwarning("fatal error", "發生意料外的狀況, 請紀錄並回報")
+            print("printToprinter -> check repeated error")
             return
-        elif check_repeat_result[5] == "unrecorded":
+        elif check_repeat_result[6] == "unrecorded":
             messagebox.showwarning("貨單後號碼錯誤", "出貨單重複!如果想重印這一單, 請先將下方同樣貨單編號的紀錄刪除")
             print(f"repeat unrecorded order: {current_order}")
             return
-        elif check_repeat_result[5] == "recorded":
-            result_delete_previous_record = messagebox.askretrycancel("貨單後號碼錯誤", f"出貨單重複!在 {check_repeat_result[1]} 時曾經列印過該出貨單, 並記錄在Excel: {check_repeat_result[4]} 中。若希望刪除資料庫中該紀錄(需要刪除才能列印, 但不會刪除在Excel的紀錄), 請選擇'重試', 若希望繼續, 請按'取消'")
+        elif check_repeat_result[6] == "recorded":
+            result_delete_previous_record = messagebox.askretrycancel("貨單後號碼錯誤", f"出貨單重複!在 {check_repeat_result[1].strftime('%m-%d %H:%M:%S')} 時曾經列印過該出貨單, 並記錄在Excel: {check_repeat_result[5]} 中。若希望刪除資料庫中該紀錄(需要刪除才能列印, 但不會刪除在Excel的紀錄), 請選擇'重試', 若希望繼續, 請按'取消'")
             if result_delete_previous_record:
                 self.database.delete_data(current_order)
             else:

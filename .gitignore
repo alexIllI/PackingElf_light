@@ -2,7 +2,6 @@ test.py
 config.py
 dark_theme_layout.png
 operation\data.db
-*.xlsx
 operation/__pycache__
 operation/data.db
 operation/accounts.bin
@@ -14,5 +13,6 @@ PackingElf.spec
 \packingelf_light
 spl.html
 tkinter_test.py
-# accounts.txt
+accounts.txt
+save/*
 # essential.txt

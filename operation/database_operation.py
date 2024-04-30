@@ -41,7 +41,7 @@ class DataBase():
         
         # MySQL connection setup
         self.connection = mysql.connector.connect(
-            host='localhost',
+            host='10.14.138.1',
             user='root',
             password='Meridian0723',
             database=self.database_name
@@ -60,10 +60,10 @@ class DataBase():
         self.cursor.execute(table_create_query)
         self.connection.commit()
         
-    def export_unrecorded_to_excel(self):
+    def export_unrecorded_to_excel(self, table_name):
         try:
             # Select including 'output_excel' column to get the specific Excel file name
-            select_query = f"SELECT time, order_number, status, invoice, output_excel FROM {self.current_table_name} WHERE record = %s"
+            select_query = f"SELECT time, order_number, status, invoice, output_excel FROM {table_name} WHERE record = %s"
             self.cursor.execute(select_query, ('unrecorded',))
             unrecorded_data = self.cursor.fetchall()
 
@@ -105,8 +105,10 @@ class DataBase():
                     print(f"find {unrecorded_count} unrecorded data in table '{table}'")
 
                     if unrecorded_count > 0:
-                        result = self.export_unrecorded_to_excel()
-                        if result == DBreturnType.EXPORT_UNRECORDED_ERROR:
+                        result = self.export_unrecorded_to_excel(table)
+                        if result == DBreturnType.SUCCESS:
+                            pass
+                        elif result == DBreturnType.EXPORT_UNRECORDED_ERROR:
                             print(f"'check_previous_records' using 'export_unrecorded_to_excel' in table '{table}' get export unrecorded error")
                             return DBreturnType.EXPORT_UNRECORDED_ERROR
                         else:
@@ -128,7 +130,7 @@ class DataBase():
 
     def insert_data(self, order_number:str, status:str, invoice:str, output_excel:str):
         try:
-            data_insert_query = f"INSERT INTO {self.current_table_name} (order_number, status, invoice, output_excel, record) VALUES (%s, %s, %s, %s, %s)"
+            data_insert_query = f"INSERT INTO {'myacg_data_' + output_excel[14:21]} (order_number, status, invoice, output_excel, record) VALUES (%s, %s, %s, %s, %s)"
             data_insert_tuple = (order_number, status, invoice, output_excel, "unrecorded")
             self.cursor.execute(data_insert_query, data_insert_tuple)
             self.connection.commit()
@@ -143,24 +145,50 @@ class DataBase():
             select_order_data = f"SELECT * FROM {self.current_table_name} WHERE order_number = %s"
             self.cursor.execute(select_order_data, (order,))
             result = self.cursor.fetchone()
-            print(f"search for order: {order} result: {result}")
+            print(f"search for order in current month: {order} result: {result}")
             if result:
                 return result
             else:
-                return DBreturnType.ORDER_NOT_FOUND  # Return None if the order is not found
+                select_order_data = f"SELECT * FROM {self.last_month_table} WHERE order_number = %s"
+                self.cursor.execute(select_order_data, (order,))
+                result = self.cursor.fetchone()
+                print(f"search for order in last month: {order} result: {result}")
+                if result:
+                    return result
+                else:
+                    return DBreturnType.ORDER_NOT_FOUND  # Return None if the order is not found
         except Exception as e:
             print(f"Error in db_operation -> search_order: {e}")
             return DBreturnType.SEARCH_ORDER_ERROR
         
-    def fetch_table_data(self, status, record, table_name):
+    def check_repeated(self, order):
+        result = self.search_order(order)
+        return result
+           
+    def fetch_table_data(self, status, record, output_excel):
+        '''
+        status: all, success, close, cancel
+        record: unrecorded = False, recorded = True
+        output_excel: output Excel name'''
+        table_name = "myacg_data_" + output_excel[14:21]
         try:
             if status == "all":
-                select_unrecorded_data = f"SELECT table_id, time, order_number, status, invoice, output_excel, record FROM {table_name} WHERE record = %s"
+                if record:
+                    select_unrecorded_data = f"SELECT table_id, time, order_number, status, invoice, output_excel, record FROM {table_name} WHERE output_excel = %s"
+                    params = (output_excel,)
+                else:
+                    select_unrecorded_data = f"SELECT table_id, time, order_number, status, invoice, output_excel, record FROM {table_name} WHERE record = %s AND output_excel = %s"
+                    params = ("unrecorded", output_excel)
             else:
-                select_unrecorded_data = f"SELECT table_id, time, order_number, status, invoice, output_excel, record FROM {table_name} WHERE record = %s AND status = %s"
+                if record:
+                    select_unrecorded_data = f"SELECT table_id, time, order_number, status, invoice, output_excel, record FROM {table_name} WHERE status = %s AND output_excel = %s"
+                    params = (status, output_excel)
+                else:
+                    select_unrecorded_data = f"SELECT table_id, time, order_number, status, invoice, output_excel, record FROM {table_name} WHERE record = %s AND status = %s AND output_excel = %s"
+                    params = ("unrecorded", status, output_excel)
 
             # Execute query
-            self.cursor.execute(select_unrecorded_data, (record,) if status == "all" else (record, status))
+            self.cursor.execute(select_unrecorded_data, params)
             results = self.cursor.fetchall()
 
             # Format time in Python
@@ -187,21 +215,29 @@ class DataBase():
             return False
 
     def count_records(self, output_excel, show_recorded):
-        record = 'unrecorded'
         try:
             if show_recorded:
-                record = 'recorded'
             # Query to count all records in the table
-            query_all = f"SELECT COUNT(*) FROM {self.current_table_name} WHERE record = %s AND output_excel = %s"
-            self.cursor.execute(query_all, (record, output_excel))
-            total_count = self.cursor.fetchone()[0]  # Fetch the result of the COUNT(*)
-            
-            # Query to count records where status is 'success'
-            query_success = f"SELECT COUNT(*) FROM {self.current_table_name} WHERE record = %s AND status = %s AND output_excel = %s"
-            self.cursor.execute(query_success, (record, "success", output_excel))
-            success_count = self.cursor.fetchone()[0]
-            
+                query_all = f"SELECT COUNT(*) FROM {self.current_table_name} WHERE output_excel = %s"
+                self.cursor.execute(query_all, (output_excel,))
+                total_count = self.cursor.fetchone()[0]  # Fetch the result of the COUNT(*)
+                
+                # Query to count records where status is 'success'
+                query_success = f"SELECT COUNT(*) FROM {self.current_table_name} WHERE status = %s AND output_excel = %s"
+                self.cursor.execute(query_success, ("success", output_excel))
+                success_count = self.cursor.fetchone()[0]
+            else:
+                query_all = f"SELECT COUNT(*) FROM {self.current_table_name} WHERE record = %s AND output_excel = %s"
+                self.cursor.execute(query_all, ("unrecorded", output_excel,))
+                total_count = self.cursor.fetchone()[0]  # Fetch the result of the COUNT(*)
+                
+                # Query to count records where status is 'success'
+                query_success = f"SELECT COUNT(*) FROM {self.current_table_name} WHERE record = %s status = %s AND output_excel = %s"
+                self.cursor.execute(query_success, ("unrecorded", "success", output_excel))
+                success_count = self.cursor.fetchone()[0]
+                
             return (total_count, success_count)
+        
         except mysql.connector.Error as err:
             print(f"Error in counting records in {self.current_table_name}: {err}")
             return (-1, -1)
@@ -227,15 +263,24 @@ class DataBase():
                     print(f"Error fetching output_excel options from {table_name}: {e}")
             else:
                 print(f"Table {table_name} does not exist.")
+                
+        if self.output_excel_name not in output_excel_options:
+            output_excel_options.insert(0, self.output_excel_name)
+            
         return output_excel_options
 
             
     def close_database(self):
         try:
             # Export unrecorded orders to Excel
-            export_result = self.export_unrecorded_to_excel()
+            export_result = self.export_unrecorded_to_excel(self.current_table_name)
             if export_result != DBreturnType.SUCCESS:
-                print(f"'close_database' calls 'export_unrecorded_to_excel' get error: {export_result}")
+                print(f"'close_database' calls 'export_unrecorded_to_excel' for current month get error: {export_result}")
+                return export_result
+            
+            export_result = self.export_unrecorded_to_excel(self.last_month_table)
+            if export_result != DBreturnType.SUCCESS:
+                print(f"'close_database' calls 'export_unrecorded_to_excel' for last month get error: {export_result}")
                 return export_result
 
             # Update all unrecorded orders to recorded
