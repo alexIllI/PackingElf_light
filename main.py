@@ -708,6 +708,8 @@ class frame_PrintOrder(ctk.CTkFrame):
             datas = self.database.fetch_all_unrecorded('close')
         elif status == "取消":
             datas = self.database.fetch_all_unrecorded('cancel')
+        else:
+            print("update getting wrong status string")
         
         for data in datas:
             if data[3] == 'success':
