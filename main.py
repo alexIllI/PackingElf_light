@@ -41,7 +41,7 @@ class App(ctk.CTk):
         
         #====================== Operation =========================
         self.myacg_manager = MyAcg()
-        self.database = DataBase(self.current_time_name, 'operation\\data.db', 'save')
+        self.database = DataBase(self.current_time_name, 'operation\\data.db', 'save')  
         while True:
             check_result = self.database.check_previous_records(self.current_time_name, (datetime.now()-timedelta(days=1)).strftime('Printed_Order_%Y_%m_%d'))
             if check_result == DBreturnType.SUCCESS:
@@ -162,7 +162,7 @@ class App(ctk.CTk):
             
             self.destroy()
             print("close app")
-
+        
 class frame_Account(ctk.CTkFrame):
     def __init__(self, parent_frame, parent):
         ctk.CTkFrame.__init__(self, parent_frame, fg_color=parent.dark0_color, corner_radius=0)
@@ -569,7 +569,7 @@ class frame_PrintOrder(ctk.CTkFrame):
         #=============================== STORAGE PATH ======================================
 
         storage_path_container = ctk.CTkFrame(master=self, height=37.5, fg_color="transparent")
-        storage_path_container.pack(fill="x", pady=(35, 0), padx=30)
+        storage_path_container.pack(fill="x", pady=(10, 0), padx=30)
 
         ctk.CTkLabel(master=storage_path_container, text="匯入紀錄: ", text_color="#fff", font=("Iansui", 24)).pack(side="left", padx=(13, 0), pady=5)
         self.save_path_combobox = ctk.CTkComboBox(master=storage_path_container, state="readonly", width=320, height = 40, font=("Iansui", 20), values=self.excel_list, button_color=parent.theme_color, border_color=parent.theme_color, 
@@ -583,10 +583,24 @@ class frame_PrintOrder(ctk.CTkFrame):
         ctk.CTkButton(master=storage_path_container, width=75, height = 40, text="匯入", font=("Iansui", 18), text_color=parent.dark0_color, 
                                           fg_color=parent.theme_color, hover_color=parent.theme_color_dark, command=self.importExcel).pack(anchor="ne", padx=(40, 0), pady=15, side="left")
 
+        #=============================== INVOICE SCANNER ======================================
+
+        invoice_container = ctk.CTkFrame(master=self, fg_color="transparent")
+        invoice_container.pack(fill="x", pady=(10, 0), padx=30)
+
+        ctk.CTkLabel(master=invoice_container, text="發票編號", text_color="#fff", font=("Iansui", 24)).pack(side="left", padx=(13, 0), pady=5)
+        
+        self.vcmd = (self.register(self.on_validate), '%P')
+        self.invoice_entry = ctk.CTkEntry(master=invoice_container, validate="key", validatecommand=self.vcmd, width=225, height = 40, font=("Iansui", 20), border_color=parent.theme_color, border_width=2)
+        self.invoice_entry.pack(side="left", padx=(13, 0), pady=5)
+        
+        # hotkey binding
+        self.invoice_entry.bind('<Return>', lambda event: self.switch_to_order_entry()) 
+
         #=============================== PRINTER ORDER ======================================
 
         prnit_order_container = ctk.CTkFrame(master=self, height=37.5, fg_color="transparent")
-        prnit_order_container.pack(fill="x", pady=(10, 0), padx=30)
+        prnit_order_container.pack(fill="x", pady=(0, 0), padx=30)
 
         ctk.CTkLabel(master=prnit_order_container, text="PG", text_color="#fff", font=("Iansui", 24)).pack(side="left", padx=(13, 0), pady=5)
         self.order_combobox = ctk.CTkComboBox(master=prnit_order_container, state="readonly", width=105, height = 40, font=("Iansui", 20), values=["018", "019", "020", "021"], button_color=parent.theme_color, border_color=parent.theme_color, 
@@ -652,16 +666,18 @@ class frame_PrintOrder(ctk.CTkFrame):
         printed_order_table_style.configure("Treeview", rowheight = 50, font=("Iansui", 14), background="#fff")
         printed_order_table_style.layout("Treeview", [('Treeview.treearea', {'sticky': 'nswe'})])
         
-        self.printed_order_table = ttk.Treeview(table_frame, columns = ('id', 'time', 'order', 'status', 'save_status'), style="Treeview", show = 'headings', yscrollcommand=tree_scroll.set)
-        self.printed_order_table.column("# 1", anchor="center",width=35)
-        self.printed_order_table.column("# 2", anchor="center",width=150)
+        self.printed_order_table = ttk.Treeview(table_frame, columns = ('id', 'time', 'order', 'status', 'invoice', 'save_status'), style="Treeview", show = 'headings', yscrollcommand=tree_scroll.set)
+        self.printed_order_table.column("# 1", anchor="center",width=30)
+        self.printed_order_table.column("# 2", anchor="center",width=145)
         self.printed_order_table.column("# 3", anchor="center")
         self.printed_order_table.column("# 4", anchor="center", width=120)
         self.printed_order_table.column("# 5", anchor="center")
+        self.printed_order_table.column("# 6", anchor="center")
         self.printed_order_table.heading('id', text = 'id')
         self.printed_order_table.heading('time', text = '時間')
         self.printed_order_table.heading('order', text = '貨單編號')
         self.printed_order_table.heading('status', text = '狀態')
+        self.printed_order_table.heading('invoice', text = '發票號碼')
         self.printed_order_table.heading('save_status', text = '儲存位置')
         self.printed_order_table.pack(fill = 'both', expand = True)
         
@@ -713,11 +729,11 @@ class frame_PrintOrder(ctk.CTkFrame):
         
         for data in datas:
             if data[3] == 'success':
-                self.printed_order_table.insert(parent = '', index = 0, values = (data[0], data[1], data[2], "成功", data[4]))
+                self.printed_order_table.insert(parent = '', index = 0, values = (data[0], data[1], data[2], "成功", data[4], data[5]))
             if data[3] == 'close':
-                self.printed_order_table.insert(parent = '', index = 0, values = (data[0], data[1], data[2], "關轉", data[4]), tags = ("close",))
+                self.printed_order_table.insert(parent = '', index = 0, values = (data[0], data[1], data[2], "關轉", data[4], data[5]), tags = ("close",))
             if data[3] == 'cancel':
-                self.printed_order_table.insert(parent = '', index = 0, values = (data[0], data[1], data[2], "取消", data[4]), tags = ("cancel",))
+                self.printed_order_table.insert(parent = '', index = 0, values = (data[0], data[1], data[2], "取消", data[4], data[5]), tags = ("cancel",))
                 
         self.label_total_order_number.configure(text = f"目前貨單總數: {self.total_order}")
         self.label_success_order_number.configure(text = f"成功列印貨單總數: {self.success_order}")
@@ -748,7 +764,7 @@ class frame_PrintOrder(ctk.CTkFrame):
                     if order_number in self.printed_order_table.item(child)['values'][2]:
                         print(f"find {self.printed_order_table.item(child)['values'][2]} within treeview, id: {result[0]}")
                         self.printed_order_table.selection_set(child)
-                        messagebox.showinfo("搜尋貨單結果", f"貨單編號: {order_number}\nID: {result[0]}\n狀態: {result[3]}\n儲存位置: {result[4]}")
+                        messagebox.showinfo("搜尋貨單結果", f"貨單編號: {order_number}\nID: {result[0]}\n狀態: {result[3]}\n發票編號: {result[4]}\n儲存位置: {result[5]}")
                         return
             else:
                 messagebox.showwarning("搜尋貨單結果", "資料庫中有紀錄這筆貨單，但不是在本次應用程式執行後紀錄，因此不會顯示在下方表格!")
@@ -801,28 +817,49 @@ class frame_PrintOrder(ctk.CTkFrame):
     def importExcel(self):
         selected_excel = self.save_path_combobox.get() + ".xlsx"
         pass
-                
+    
+    # Validate if the input is english and number or not        
+    def on_validate(self, P):
+        """Validate new content if it's purely ASCII."""
+        if P.isascii():
+            return True
+        else:
+            messagebox.showwarning("輸入法錯誤", "喇咪說這樣不能印，請將輸入法切換成英文後重新掃描一次條碼")
+            self.after(1, lambda: self.clear_entry(self.invoice_entry))  # Schedule the clear_entry to avoid issues with direct deletion within validation
+            return False
+        
+    def clear_entry(self, target_entry):
+        """Clears the content of the entry widget."""
+        target_entry.delete(0, 'end')
+            
+    def switch_to_order_entry(self):
+        invoice_text = self.invoice_entry.get()  # Get the scan result of the entry
+        invoice = invoice_text[5:15]     # Extract the invoice number of the scan result
+        self.invoice_entry.delete(0, 'end')  # Clear the current entry
+        self.invoice_entry.insert(0, invoice)
+        self.order_entry.focus_set()
+                        
     def printLastOrder(self):
-        def print_cancel_close(_status:str, order):
+        def print_cancel_close(_status:str, order, invoice):
             self.total_order += 1
             self.current_id += 1
             self.label_total_order_number.configure(text = f"目前貨單總數: {self.total_order}")
             cur_time = datetime.now().strftime('%H:%M:%S')
-            self.database.insert_data(self.current_id, cur_time, order, _status, self.cur_time_name)
+            self.database.insert_data(self.current_id, cur_time, order, _status, invoice, self.cur_time_name)
             if _status == "close":
                 self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, cur_time, order, "關轉", self.cur_time_name), tags = (_status,))
             else:
                 self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, cur_time, order, "取消", self.cur_time_name), tags = (_status,))
             self.update(self.view_status_enrty.get())
         
-        def print_success(order):
+        def print_success(order, invoice):
             self.total_order += 1
             self.success_order += 1
             self.current_id += 1
             self.label_total_order_number.configure(text = f"目前貨單總數: {self.total_order}")
             self.label_success_order_number.configure(text = f"成功列印貨單總數: {self.success_order}")
             cur_time = datetime.now().strftime('%H:%M:%S')
-            self.database.insert_data(self.current_id, cur_time, order, 'success', self.cur_time_name)
+            self.database.insert_data(self.current_id, cur_time, order, 'success', invoice, self.cur_time_name)
             self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, cur_time, order, '成功', self.cur_time_name))
             self.update(self.view_status_enrty.get())
             
@@ -848,7 +885,7 @@ class frame_PrintOrder(ctk.CTkFrame):
             
         elif result == ReturnType.ORDER_CANCELED:
             messagebox.showwarning("取消", "此單已被取消!請至買動漫確認)")
-            print_cancel_close("cancel", self.last_order)
+            print_cancel_close("cancel", self.last_order, self.last_invoice)
             print("order canceled")
         
         elif result == ReturnType.ORDER_NOT_FOUND:
@@ -872,7 +909,7 @@ class frame_PrintOrder(ctk.CTkFrame):
             
         elif result == ReturnType.STORE_CLOSED:
             messagebox.showwarning("寄送商店關轉", "該筆貨單寄送商店關轉中!")
-            print_cancel_close("close", self.last_order)
+            print_cancel_close("close", self.last_order, self.last_invoice)
             print("store closed")
             
         elif result == ReturnType.SWITCH_TAB_ERROR:
@@ -888,11 +925,11 @@ class frame_PrintOrder(ctk.CTkFrame):
             
         elif result == ReturnType.CLOSED_TAB_ERROR:
             messagebox.showwarning("網頁自動化錯誤", "成功列印出貨單，已經記錄在文件中。但關閉分頁時發生異常，請手動關閉'出貨單'分頁!!!!")
-            print_success(self.last_order)
+            print_success(self.last_order, self.last_invoice)
             print("closed tab error")
             
         elif result == ReturnType.SUCCESS:
-            print_success(self.last_order)
+            print_success(self.last_order, self.last_invoice)
             print("Success!")
         
         else:
@@ -900,27 +937,35 @@ class frame_PrintOrder(ctk.CTkFrame):
             return
         
     def printToprinter(self):
-        def print_cancel_close(_status:str, order):
+        validate_string = self.invoice_entry.get()
+        print(validate_string)
+        if not validate_string.isascii():
+            self.invoice_entry.delete(0, 'end')
+            self.invoice_entry.focus_set()
+            messagebox.showerror("輸入法錯誤", "喇咪說這樣不能印，請將輸入法切換成英文後重新掃描一次條碼")
+            return
+        
+        def print_cancel_close(_status:str, order, invoice):
             self.total_order += 1
             self.current_id += 1
             self.label_total_order_number.configure(text = f"目前貨單總數: {self.total_order}")
             cur_time = datetime.now().strftime('%H:%M:%S')
-            self.database.insert_data(self.current_id, cur_time, order, _status, self.cur_time_name)
+            self.database.insert_data(self.current_id, cur_time, order, _status, invoice, self.cur_time_name)
             if _status == "close":
-                self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, cur_time, order, "關轉", self.cur_time_name), tags = (_status,))
+                self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, cur_time, order, "關轉", invoice, self.cur_time_name), tags = (_status,))
             else:
-                self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, cur_time, order, "取消", self.cur_time_name), tags = (_status,))
+                self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, cur_time, order, "取消", invoice, self.cur_time_name), tags = (_status,))
             self.update(self.view_status_enrty.get())
         
-        def print_success(order):
+        def print_success(order, invoice):
             self.total_order += 1
             self.success_order += 1
             self.current_id += 1
             self.label_total_order_number.configure(text = f"目前貨單總數: {self.total_order}")
             self.label_success_order_number.configure(text = f"成功列印貨單總數: {self.success_order}")
             cur_time = datetime.now().strftime('%H:%M:%S')
-            self.database.insert_data(self.current_id, cur_time, order, 'success', self.cur_time_name)
-            self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, cur_time, order, '成功', self.cur_time_name))
+            self.database.insert_data(self.current_id, cur_time, order, 'success', invoice, self.cur_time_name)
+            self.printed_order_table.insert(parent = '', index = 0, values = (self.current_id, cur_time, order, '成功', invoice, self.cur_time_name))
             self.update(self.view_status_enrty.get())
         
         if not self.order_combobox.get():
@@ -940,9 +985,19 @@ class frame_PrintOrder(ctk.CTkFrame):
             self.order_entry.delete(0, 'end')
             return
         
+        if len(self.invoice_entry.get()) < 9:
+            messagebox.showwarning("發票號碼錯誤", "喇咪說你很笨ㄟ 怎麼會忘記輸入發票")
+            print("wrong invoice number")
+            self.invoice_entry.focus_set()
+            return
+        
         current_order = f"PG{self.order_combobox.get()}{self.order_entry.get()}"
+        current_invoice = self.invoice_entry.get()
         self.order_entry.delete(0, 'end')
+        self.invoice_entry.delete(0, 'end')
         self.last_order = current_order
+        self.last_invoice = current_invoice
+        self.invoice_entry.focus_set()
         
         #check if it is repeated order
         check_repeat_result =  self.database.search_order(current_order)
@@ -977,7 +1032,7 @@ class frame_PrintOrder(ctk.CTkFrame):
             
         elif result == ReturnType.ORDER_CANCELED:
             messagebox.showwarning("取消", "此單已被取消!請至買動漫確認)")
-            print_cancel_close("cancel", current_order)
+            print_cancel_close("cancel", current_order, current_invoice)
             print("order canceled")
         
         elif result == ReturnType.ORDER_NOT_FOUND:
@@ -1001,7 +1056,7 @@ class frame_PrintOrder(ctk.CTkFrame):
             
         elif result == ReturnType.STORE_CLOSED:
             messagebox.showwarning("寄送商店關轉", "該筆貨單寄送商店關轉中!")
-            print_cancel_close("close", current_order)
+            print_cancel_close("close", current_order, current_invoice)
             print("store closed")
             
         elif result == ReturnType.SWITCH_TAB_ERROR:
@@ -1017,11 +1072,11 @@ class frame_PrintOrder(ctk.CTkFrame):
             
         elif result == ReturnType.CLOSED_TAB_ERROR:
             messagebox.showwarning("網頁自動化錯誤", "成功列印出貨單，已經記錄在文件中。但關閉分頁時發生異常，請手動關閉'出貨單'分頁!!!!")
-            print_success(current_order)
+            print_success(current_order, current_invoice)
             print("closed tab error")
             
         elif result == ReturnType.SUCCESS:
-            print_success(current_order)
+            print_success(current_order, current_invoice)
             print("Success!")
         
         else:
