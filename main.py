@@ -960,7 +960,9 @@ class frame_PrintOrder(ctk.CTkFrame):
         
         #check if it is repeated order
         check_repeat_result =  self.database.check_repeated(current_order)
-        if check_repeat_result == DBreturnType.SEARCH_ORDER_ERROR:
+        if check_repeat_result == DBreturnType.ORDER_NOT_FOUND:
+            pass
+        elif check_repeat_result == DBreturnType.SEARCH_ORDER_ERROR:
             messagebox.showwarning("fatal error", "發生意料外的狀況, 請紀錄並回報")
             print("printToprinter -> check repeated error")
             return
@@ -975,6 +977,9 @@ class frame_PrintOrder(ctk.CTkFrame):
             else:
                 print(f"repeat recorded order: {current_order}")
                 return
+        else:
+            print("check_repeated_result get Enum error!")
+            return
             
         #print to printer using autoweb
         result = self.myacg_manager.printer(current_order)

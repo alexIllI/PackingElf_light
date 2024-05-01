@@ -232,7 +232,7 @@ class DataBase():
                 total_count = self.cursor.fetchone()[0]  # Fetch the result of the COUNT(*)
                 
                 # Query to count records where status is 'success'
-                query_success = f"SELECT COUNT(*) FROM {self.current_table_name} WHERE record = %s status = %s AND output_excel = %s"
+                query_success = f"SELECT COUNT(*) FROM {self.current_table_name} WHERE record = %s AND status = %s AND output_excel = %s"
                 self.cursor.execute(query_success, ("unrecorded", "success", output_excel))
                 success_count = self.cursor.fetchone()[0]
                 
