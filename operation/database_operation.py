@@ -41,7 +41,7 @@ class DataBase():
         
         # MySQL connection setup
         self.connection = mysql.connector.connect(
-            host='10.14.138.1',
+            host='192.168.1.102',
             user='root',
             password='Meridian0723',
             database=self.database_name
@@ -148,15 +148,18 @@ class DataBase():
             print(f"search for order in current month: {order} result: {result}")
             if result:
                 return result
-            else:
+            
+            check_table_exists = f"SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s"
+            self.cursor.execute(check_table_exists, (self.database_name, self.last_month_table))
+            if self.cursor.fetchone()[0] == 1:
                 select_order_data = f"SELECT * FROM {self.last_month_table} WHERE order_number = %s"
                 self.cursor.execute(select_order_data, (order,))
                 result = self.cursor.fetchone()
-                print(f"search for order in last month: {order} result: {result}")
-                if result:
-                    return result
-                else:
-                    return DBreturnType.ORDER_NOT_FOUND  # Return None if the order is not found
+                print(f"Search for order in last month: {order} result: {result}")
+            if result:
+                return result
+            else:
+                return DBreturnType.ORDER_NOT_FOUND  # Return None if the order is not found
         except Exception as e:
             print(f"Error in db_operation -> search_order: {e}")
             return DBreturnType.SEARCH_ORDER_ERROR
@@ -278,10 +281,13 @@ class DataBase():
                 print(f"'close_database' calls 'export_unrecorded_to_excel' for current month get error: {export_result}")
                 return export_result
             
-            export_result = self.export_unrecorded_to_excel(self.last_month_table)
-            if export_result != DBreturnType.SUCCESS:
-                print(f"'close_database' calls 'export_unrecorded_to_excel' for last month get error: {export_result}")
-                return export_result
+            check_table_exists = f"SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s"
+            self.cursor.execute(check_table_exists, (self.database_name, self.last_month_table))
+            if self.cursor.fetchone()[0] == 1:
+                export_result = self.export_unrecorded_to_excel(self.last_month_table)
+                if export_result != DBreturnType.SUCCESS:
+                    print(f"'close_database' calls 'export_unrecorded_to_excel' for last month get error: {export_result}")
+                    return export_result
 
             # Update all unrecorded orders to recorded
             update_query = f"UPDATE {self.current_table_name} SET record = %s WHERE record = %s"
