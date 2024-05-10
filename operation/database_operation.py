@@ -41,7 +41,7 @@ class DataBase():
         
         # MySQL connection setup
         self.connection = mysql.connector.connect(
-            host='192.168.1.102',
+            host='localhost',
             user='root',
             password='Meridian0723',
             database=self.database_name
