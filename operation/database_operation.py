@@ -269,6 +269,9 @@ class DataBase():
                 
         if self.output_excel_name not in output_excel_options:
             output_excel_options.insert(0, self.output_excel_name)
+        else:
+            output_excel_options.remove(self.output_excel_name)
+            output_excel_options.insert(0, self.output_excel_name)
             
         return output_excel_options
 

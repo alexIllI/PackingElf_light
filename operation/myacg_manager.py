@@ -221,7 +221,7 @@ class MyAcg():
         
         #click print order
         try:
-            print_order = self.driver.find_element(By.ID, 'PrintBatch')
+            print_order = self.driver.find_element(By.ID, 'PrintBatch_2')
             print_order.click()
         except:
             return ReturnType.CLICKING_PRINT_ORDER_ERROR
