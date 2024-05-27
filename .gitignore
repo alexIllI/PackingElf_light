@@ -3,10 +3,10 @@ config.py
 dark_theme_layout.png
 operation\data.db
 operation/__pycache__
+frames/__pycache__
 operation/data.db
 operation/accounts.bin
 requirements_conda.txt
-requirements.txt
 \build
 \dist
 PackingElf.spec
@@ -16,4 +16,6 @@ tkinter_test.py
 accounts.txt
 save/*
 myacg_test.py
-# essential.txt
+ecpay.png
+InvoiceIssue_20240526135626.xlsx
+essential.txt

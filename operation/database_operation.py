@@ -5,6 +5,7 @@ import mysql.connector
 from mysql.connector import Error
 import pandas as pd
 from enum import Enum
+from dotenv import load_dotenv
 
 def resource_path(relative_path):
     """ Get absolute path to resource, works for dev and for PyInstaller """
@@ -28,8 +29,9 @@ class DBreturnType(Enum):
 
 class DataBase():
     def __init__(self, save_path:str):
+        load_dotenv()
         self.save_path = save_path
-        self.database_name = 'MyACG_data'
+        self.database_name = os.getenv('DB_NAME')
         
         # Dynamically name the table based on the current year and month
         current_time = datetime.datetime.now()
@@ -41,9 +43,9 @@ class DataBase():
         
         # MySQL connection setup
         self.connection = mysql.connector.connect(
-            host='localhost',
-            user='root',
-            password='Meridian0723',
+            host = os.getenv('DB_HOST'),
+            user = os.getenv('DB_USER'),
+            password = os.getenv('DB_PASSWORD'),
             database=self.database_name
         )
         self.cursor = self.connection.cursor()
