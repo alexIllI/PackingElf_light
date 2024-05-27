@@ -148,6 +148,11 @@ class MyAcg():
 
     #find search bar and search
     def printer(self, order):
+        
+        # ================== for test ==================
+        # return ReturnType.SUCCESS
+        # ==============================================
+        
         if len(self.driver.window_handles) > 1:
             return ReturnType.MULTIPLE_TAB
         

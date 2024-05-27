@@ -14,7 +14,6 @@ class frame_PrintOrder(ctk.CTkFrame):
         
         self.cancel_color = parent.cancel_color
         self.close_color = parent.close_color
-        self.last_order = ""
         self.table_list = self.database.get_output_excel_options()
 
         #=============================== TITLE ======================================
@@ -68,8 +67,8 @@ class frame_PrintOrder(ctk.CTkFrame):
         ctk.CTkButton(master=prnit_order_container, width=75, height = 40, text="列印", font=("Iansui", 18), text_color=parent.dark0_color, 
                                           fg_color=parent.theme_color, hover_color=parent.theme_color_dark, command=self.printToprinter).pack(anchor="ne", padx=(70, 0), pady=15, side="left")
         
-        ctk.CTkButton(master=prnit_order_container, width=75, height = 40, text="重印上一單", font=("Iansui", 18), text_color=parent.dark0_color, 
-                                          fg_color=parent.theme_color, hover_color=parent.theme_color_dark, command=self.printLastOrder).pack(anchor="ne", padx=(10, 40), pady=15, side="left")
+        ctk.CTkButton(master=prnit_order_container, width=75, height = 40, text="重印選取貨單", font=("Iansui", 18), text_color=parent.dark0_color, 
+                                          fg_color=parent.theme_color, hover_color=parent.theme_color_dark, command=self.btn_print_again).pack(anchor="ne", padx=(10, 40), pady=15, side="left")
         
         #=============================== ORDER COUNT ======================================
 
@@ -294,23 +293,46 @@ class frame_PrintOrder(ctk.CTkFrame):
         self.invoice_entry.delete(0, 'end')  # Clear the current entry
         self.invoice_entry.insert(0, invoice)
         self.order_entry.focus_set()
-                        
-    def printLastOrder(self):
+    
+    def btn_print_again(self):
+        #if there was selected row in treeview
+        if self.printed_order_table.selection():
+            print('print selected order using btn')
+            if len(self.printed_order_table.selection()) > 1:
+                messagebox.showwarning("重印貨單警告", "一次只能重新列印一筆貨單，請只選擇一筆重印!")
+                return
+            
+            order = self.printed_order_table.item(self.printed_order_table.selection())['values'][2]
+            invoice = self.printed_order_table.item(self.printed_order_table.selection())['values'][4]
+            
+            if messagebox.askokcancel("重印貨單", f"確定要重印 {order} ?"):
+                print(f"print order: {order} with invoice: {invoice} again")
+                self.printOrderAgain(order, invoice)
+                self.update_table(self.view_status_enrty.get(), self.store_table_combobox.get())
+                return
+            
+        else:
+            messagebox.showwarning("重印貨單結果", "老哥，先選擇再重印好嗎")
+            print("no selected order while print again btn pressed")
+            return
+                
+    def printOrderAgain(self, order, invoice):
         def print_cancel_close(_status:str, order, invoice):
+            self.database.delete_data(order)
             self.database.insert_data(order, _status, invoice, self.store_table_combobox.get())
             self.update_table(self.view_status_enrty.get(), self.store_table_combobox.get())
         
         def print_success(order, invoice):
+            self.database.delete_data(order)
             self.database.insert_data(order, 'success', invoice, self.store_table_combobox.get())
             self.update_table(self.view_status_enrty.get(), self.store_table_combobox.get())
             
-        if self.last_order == "":
+        if order == "":
             messagebox.showwarning("無法重印上一單", "找不到上一單的資訊!")
             print("no last order")
             return
-        
-        self.database.delete_data(self.last_order)        
-        result = self.myacg_manager.printer(self.last_order)
+                
+        result = self.myacg_manager.printer(order)
         
         if result == ReturnType.MULTIPLE_TAB:
             messagebox.showwarning("網頁自動化錯誤", "請開啟瀏覽器將買動漫以外的分頁關閉!")
@@ -326,7 +348,7 @@ class frame_PrintOrder(ctk.CTkFrame):
             
         elif result == ReturnType.ORDER_CANCELED:
             messagebox.showwarning("取消", "此單已被取消!請至買動漫確認)")
-            print_cancel_close("cancel", self.last_order, self.last_invoice)
+            print_cancel_close("cancel", order, invoice)
             print("order canceled")
         
         elif result == ReturnType.ORDER_NOT_FOUND:
@@ -350,7 +372,7 @@ class frame_PrintOrder(ctk.CTkFrame):
             
         elif result == ReturnType.STORE_CLOSED:
             messagebox.showwarning("寄送商店關轉", "該筆貨單寄送商店關轉中!")
-            print_cancel_close("close", self.last_order, self.last_invoice)
+            print_cancel_close("close", order, invoice)
             print("store closed")
             
         elif result == ReturnType.SWITCH_TAB_ERROR:
@@ -366,11 +388,11 @@ class frame_PrintOrder(ctk.CTkFrame):
             
         elif result == ReturnType.CLOSED_TAB_ERROR:
             messagebox.showwarning("網頁自動化錯誤", "成功列印出貨單，已經記錄在文件中。但關閉分頁時發生異常，請手動關閉'出貨單'分頁!!!!")
-            print_success(self.last_order, self.last_invoice)
+            print_success(order, invoice)
             print("closed tab error")
             
         elif result == ReturnType.SUCCESS:
-            print_success(self.last_order, self.last_invoice)
+            print_success(order, invoice)
             print("Success!")
         
         else:
@@ -421,8 +443,6 @@ class frame_PrintOrder(ctk.CTkFrame):
         current_invoice = self.invoice_entry.get()
         self.order_entry.delete(0, 'end')
         self.invoice_entry.delete(0, 'end')
-        self.last_order = current_order
-        self.last_invoice = current_invoice
         self.invoice_entry.focus_set()
         
         #check if it is repeated order
