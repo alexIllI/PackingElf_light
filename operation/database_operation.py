@@ -66,6 +66,7 @@ class DataBase():
         try:
             # Select including 'output_excel' column to get the specific Excel file name
             select_query = f"SELECT time, order_number, status, invoice, output_excel FROM {table_name} WHERE record = %s"
+            print(f"exporting unrecorded data to Excel: {table_name}")
             self.cursor.execute(select_query, ('unrecorded',))
             unrecorded_data = self.cursor.fetchall()
 
