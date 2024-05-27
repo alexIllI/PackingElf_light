@@ -148,7 +148,6 @@ class MyAcg():
 
     #find search bar and search
     def printer(self, order):
-        return ReturnType.SUCCESS
         if len(self.driver.window_handles) > 1:
             return ReturnType.MULTIPLE_TAB
         
@@ -222,7 +221,7 @@ class MyAcg():
         
         #click print order
         try:
-            print_order = self.driver.find_element(By.ID, 'PrintBatch')
+            print_order = self.driver.find_element(By.ID, 'PrintBatch_2')
             print_order.click()
         except:
             return ReturnType.CLICKING_PRINT_ORDER_ERROR

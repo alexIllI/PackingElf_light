@@ -2,17 +2,20 @@ test.py
 config.py
 dark_theme_layout.png
 operation\data.db
-*.xlsx
 operation/__pycache__
+frames/__pycache__
 operation/data.db
 operation/accounts.bin
 requirements_conda.txt
-requirements.txt
 \build
 \dist
 PackingElf.spec
 \packingelf_light
 spl.html
 tkinter_test.py
-# accounts.txt
-# essential.txt
+accounts.txt
+save/*
+myacg_test.py
+ecpay.png
+InvoiceIssue_20240526135626.xlsx
+essential.txt
