@@ -4,6 +4,7 @@ dark_theme_layout.png
 operation\data.db
 operation/__pycache__
 frames/__pycache__
+tests/__pycache__
 operation/data.db
 operation/accounts.bin
 requirements_conda.txt
