@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
+from tkinter import filedialog
 import pandas as pd
 import pymysql
 
@@ -69,5 +70,17 @@ combobox.pack(pady=5)
 # Export button
 export_button = ttk.Button(root, text="Export to Excel", command=export_table)
 export_button.pack(pady=20)
+# Select folder button
+def select_folder():
+    folder_path = filedialog.askdirectory()
+    if folder_path:
+        folder_path_entry.delete(0, tk.END)
+        folder_path_entry.insert(0, folder_path)
 
+select_folder_button = ttk.Button(root, text="Select Folder", command=select_folder)
+select_folder_button.pack(pady=5)
+
+# Folder path entry
+folder_path_entry = ttk.Entry(root)
+folder_path_entry.pack(pady=5)
 root.mainloop()

@@ -1,10 +1,12 @@
 test.py
+.vscode
 config.py
+__pycache__
 dark_theme_layout.png
 operation\data.db
 operation/__pycache__
 frames/__pycache__
-tests/__pycache__
+tests
 operation/data.db
 operation/accounts.bin
 requirements_conda.txt
@@ -21,3 +23,4 @@ myacg_test.py
 ecpay.png
 InvoiceIssue_20240526135626.xlsx
 essential.txt
+task.txt
