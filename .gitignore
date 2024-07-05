@@ -18,7 +18,7 @@ PackingElf.spec
 spl.html
 tkinter_test.py
 accounts.txt
-save/*
+save
 myacg_test.py
 ecpay.png
 InvoiceIssue_20240526135626.xlsx

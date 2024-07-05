@@ -5,6 +5,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait 
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.service import Service
+from selenium.common.exceptions import NoSuchElementException
 
 import os
 import sys
@@ -182,22 +183,36 @@ class MyAcg():
         try:
             self.driver.find_element(By.XPATH, '//*[@id="wrap"]/div[2]/div[2]/div[1]/table/tbody/tr[1]/td[1]/div[1]/div/span[2]')
             return ReturnType.ORDER_CANCELED
-        except:
+        except NoSuchElementException:
             pass
         
-        #check if the order already finished
-        # try:
-        #     # locate print order button as indicator of whether it's finished
-        #     self.driver.find_element(By.XPATH, '//*[@id="wrap"]/div[2]/div[2]/div[1]/table/tbody/tr/td[7]/a[4]')
-        # except:
-        #     return ReturnType.ALREADY_FINISH
-        
-        # check if there is closed tag
+        # check if there is closed tag-------------------------------------------
         try:
             self.driver.find_element(By.XPATH, '//*[@id="wrap"]/div[2]/div[2]/div[1]/table/tbody/tr[1]/td[7]/span')
             return ReturnType.STORE_CLOSED
-        except:
+        except NoSuchElementException:
             pass
+        try:
+            self.driver.find_element(By.XPATH, '//*[@id="wrap"]/div[2]/div[2]/div[1]/table/tbody/tr/td[1]/div[2]/div/span[2]')
+            return ReturnType.STORE_CLOSED
+        except NoSuchElementException:
+            pass
+        # ------------------------------------------------------------------------
+        
+        #check if using coupon
+        try:
+            # locate print order button as indicator of whether it's finished
+            self.driver.find_element(By.XPATH, '//*[@id="wrap"]/div[2]/div[2]/div[1]/table/tbody/tr[1]/td[6]/p')
+            print("using coupon")
+        except NoSuchElementException:
+            print("not using coupon")
+            
+        # locate order establishment date
+        try:
+            self.order_establish_date = self.driver.find_element(By.XPATH, '//*[@id="wrap"]/div[2]/div[2]/div[2]/div[3]/div[1]')
+        except:
+            return ReturnType.ORDER_DATE_NOT_FOUND
+        print(self.order_establish_date.text)
         
         #======================================= TEST RETURN ====================================================
         # try:
