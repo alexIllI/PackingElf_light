@@ -153,7 +153,7 @@ class MyAcg():
         self.order_establish_date = None
         
         # ================== for test ==================
-        return ["是", "2024-07-01 12:00:00"]
+        # return ["是", "2024-07-01 12:00:00"]
         # ==============================================
         
         if len(self.driver.window_handles) > 1:
@@ -212,8 +212,9 @@ class MyAcg():
             
         # locate order establishment date
         try:
-            self.order_establish_date_element = self.driver.find_element(By.XPATH, '//*[@id="wrap"]/div[2]/div[2]/div[2]/div[3]/div[1]')
-            self.order_establish_date = self.order_establish_date_element.text
+            self.order_establish_date_element = self.driver.find_element(By.CLASS_NAME, 'order_process_text_orange')
+            full_text = self.order_establish_date_element.text
+            self.order_establish_date = full_text.split('\n')[-1].strip()
         except:
             # return ReturnType.ORDER_DATE_NOT_FOUND
             print("order establish date not found")
