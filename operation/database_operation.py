@@ -43,7 +43,7 @@ class DataBase():
         
         # MySQL connection setup
         self.connection = mysql.connector.connect(
-            host = os.getenv('DB_HOST'),
+            host = "192.168.1.114",
             user = os.getenv('DB_USER'),
             password = os.getenv('DB_PASSWORD'),
             database=self.database_name
@@ -57,7 +57,9 @@ class DataBase():
             status TEXT,
             invoice TEXT,
             output_excel TEXT,
-            record TEXT
+            record TEXT,
+            using_coupon TEXT,
+            order_establish_date TEXT
         )"""
         self.cursor.execute(table_create_query)
         self.connection.commit()
@@ -65,7 +67,7 @@ class DataBase():
     def export_unrecorded_to_excel(self, table_name):
         try:
             # Select including 'output_excel' column to get the specific Excel file name
-            select_query = f"SELECT time, order_number, status, invoice, output_excel FROM {table_name} WHERE record = %s"
+            select_query = f"SELECT time, order_number, status, invoice, output_excel, using_coupon, order_establish_date FROM {table_name} WHERE record = %s"
             print(f"exporting unrecorded data to Excel: {table_name}")
             self.cursor.execute(select_query, ('unrecorded',))
             unrecorded_data = self.cursor.fetchall()
@@ -73,9 +75,9 @@ class DataBase():
             if unrecorded_data:
                 for data_row in unrecorded_data:
                     # Unpack each row into respective columns including 'output_excel'
-                    time, order_number, status, invoice, output_excel = data_row
-                    new_data_df = pd.DataFrame([[time, order_number, status, invoice]],
-                                               columns=['Time', 'Order Number', 'Status', 'Invoice Number'])
+                    time, order_number, status, invoice, output_excel, using_coupon, order_establish_date = data_row
+                    new_data_df = pd.DataFrame([[time, order_number, status, invoice, using_coupon, order_establish_date]],
+                                               columns=['時間', '貨單編號', '狀態', '發票號碼', '使用優惠券', '訂單建立日期'])
 
                     # Create or append to the Excel file specified in 'output_excel'
                     file_path = os.path.join(self.save_path, f"{output_excel}.xlsx")
@@ -131,10 +133,10 @@ class DataBase():
             
         return DBreturnType.SUCCESS
 
-    def insert_data(self, order_number:str, status:str, invoice:str, output_excel:str):
+    def insert_data(self, order_number:str, status:str, invoice:str, output_excel:str, using_coupon:str, order_establish_date:str):
         try:
-            data_insert_query = f"INSERT INTO {'myacg_data_' + output_excel[14:21]} (order_number, status, invoice, output_excel, record) VALUES (%s, %s, %s, %s, %s)"
-            data_insert_tuple = (order_number, status, invoice, output_excel, "unrecorded")
+            data_insert_query = f"INSERT INTO {'myacg_data_' + output_excel[14:21]} (order_number, status, invoice, output_excel, record, using_coupon, order_establish_date) VALUES (%s, %s, %s, %s, %s, %s, %s)"
+            data_insert_tuple = (order_number, status, invoice, output_excel, "unrecorded", using_coupon, order_establish_date)
             self.cursor.execute(data_insert_query, data_insert_tuple)
             self.connection.commit()
             print("Data inserted to database successfully!")

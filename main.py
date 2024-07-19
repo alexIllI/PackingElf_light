@@ -13,6 +13,7 @@ from configparser import ConfigParser
 from frames.setting_frame import frame_SaveSetting
 from frames.account_frame import frame_Account
 from frames.printorder_frame import frame_PrintOrder
+from frames.shipping_frame import frame_Shipping
 
 def resource_path(relative_path):
     """ Get absolute path to resource, works for dev and for PyInstaller """
@@ -88,16 +89,21 @@ class App(ctk.CTk):
         logo_img_data = Image.open(resource_path("images\icon_meridian_white.png"))
         logo_img = ctk.CTkImage(dark_image=logo_img_data, light_image=logo_img_data, size=(135, 136.3))
         ctk.CTkLabel(master=self.sidebar_frame, text="", image=logo_img).pack(pady=(40, 0), anchor="center")
-        
+
+        #============================ side bar btn ===========================
         package_img_data = Image.open(resource_path("images\printer.png"))
         package_img = ctk.CTkImage(dark_image=package_img_data, light_image=package_img_data)
-
         self.print_prder_btn = ctk.CTkButton(master=self.sidebar_frame, width=200, image=package_img, text="列印出貨單", fg_color=self.dark1_color, font=("Iansui", 18), 
                 hover_color=self.dark3_color, anchor="center", command=lambda: self.show_frame("frame_PrintOrder"))
-        self.print_prder_btn.pack(anchor="center", ipady=5, pady=(135, 0))
+        self.print_prder_btn.pack(anchor="center", ipady=5, pady=(100, 0))
         
-        #==============================================
         self.current_selected_btn = self.print_prder_btn
+        
+        shipping_img_data = Image.open(resource_path("images\shipping_icon.png"))
+        shipping_img = ctk.CTkImage(dark_image=shipping_img_data, light_image=shipping_img_data)
+        self.shipping_btn = ctk.CTkButton(master=self.sidebar_frame, width=200, image=shipping_img, text="宅配紀錄", fg_color="transparent", font=("Iansui", 18), 
+                hover_color=self.dark3_color, anchor="center", command=lambda: self.show_frame("frame_Shipping"))
+        self.shipping_btn.pack(anchor="center", ipady=5, pady=(16, 0))
         
         list_img_data = Image.open(resource_path("images\list_icon.png"))
         list_img = ctk.CTkImage(dark_image=list_img_data, light_image=list_img_data)
@@ -107,8 +113,9 @@ class App(ctk.CTk):
 
         settings_img_data = Image.open(resource_path("images\settings_icon.png"))
         settings_img = ctk.CTkImage(dark_image=settings_img_data, light_image=settings_img_data)
-        ctk.CTkButton(master=self.sidebar_frame, width=200, image=settings_img, text="設定", fg_color="transparent", font=("Iansui", 18), 
-                hover_color=self.dark3_color, anchor="center").pack(anchor="center", ipady=5, pady=(16, 0),)
+        self.setting_btn = ctk.CTkButton(master=self.sidebar_frame, width=200, image=settings_img, text="設定", fg_color="transparent", font=("Iansui", 18), 
+                hover_color=self.dark3_color, anchor="center")
+        self.setting_btn.pack(anchor="center", ipady=5, pady=(16, 0),)
         
         settings_img_data = Image.open(resource_path("images\person_icon.png"))
         settings_img = ctk.CTkImage(dark_image=settings_img_data, light_image=settings_img_data)
@@ -118,7 +125,7 @@ class App(ctk.CTk):
         
         #========================== Other Pages ===========================
         self.frames = {}
-        for F in (frame_Account, frame_PrintOrder, frame_SaveSetting):
+        for F in (frame_Account, frame_PrintOrder, frame_SaveSetting, frame_Shipping):
             page_name = F.__name__
             frame = F(parent_frame=self.root_container, parent=self)
             self.frames[page_name] = frame
@@ -144,6 +151,10 @@ class App(ctk.CTk):
         elif page_name == "frame_SaveSetting":
             self.current_selected_btn = self.saveSetting_btn
             self.saveSetting_btn.configure(fg_color=self.dark1_color)
+            
+        elif page_name == "frame_Shipping":
+            self.current_selected_btn = self.shipping_btn
+            self.shipping_btn.configure(fg_color=self.dark1_color)
         
     def on_closing(self):
         if messagebox.askokcancel("退出包貨小精靈", "確定要退出? (會自動匯出本次所有貨單)"):

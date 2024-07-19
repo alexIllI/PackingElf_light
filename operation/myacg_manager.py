@@ -149,9 +149,11 @@ class MyAcg():
 
     #find search bar and search
     def printer(self, order):
+        self.using_coupon = "否"
+        self.order_establish_date = None
         
         # ================== for test ==================
-        # return ReturnType.SUCCESS
+        return ["是", "2024-07-01 12:00:00"]
         # ==============================================
         
         if len(self.driver.window_handles) > 1:
@@ -203,16 +205,18 @@ class MyAcg():
         try:
             # locate print order button as indicator of whether it's finished
             self.driver.find_element(By.XPATH, '//*[@id="wrap"]/div[2]/div[2]/div[1]/table/tbody/tr[1]/td[6]/p')
+            self.using_coupon = "是"
             print("using coupon")
         except NoSuchElementException:
             print("not using coupon")
             
         # locate order establishment date
         try:
-            self.order_establish_date = self.driver.find_element(By.XPATH, '//*[@id="wrap"]/div[2]/div[2]/div[2]/div[3]/div[1]')
+            self.order_establish_date_element = self.driver.find_element(By.XPATH, '//*[@id="wrap"]/div[2]/div[2]/div[2]/div[3]/div[1]')
+            self.order_establish_date = self.order_establish_date_element.text
         except:
-            return ReturnType.ORDER_DATE_NOT_FOUND
-        print(self.order_establish_date.text)
+            # return ReturnType.ORDER_DATE_NOT_FOUND
+            print("order establish date not found")
         
         #======================================= TEST RETURN ====================================================
         # try:
@@ -292,7 +296,7 @@ class MyAcg():
         except:
             return ReturnType.CLOSED_TAB_ERROR
         
-        return ReturnType.SUCCESS
+        return [self.using_coupon, self.order_establish_date]
     
     def switch_account(self, username):
 

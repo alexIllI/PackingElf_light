@@ -15,6 +15,9 @@ class frame_PrintOrder(ctk.CTkFrame):
         self.cancel_color = parent.cancel_color
         self.close_color = parent.close_color
         self.table_list = self.database.get_output_excel_options()
+        
+        self.order_prefix = ["019", "020", "021", "022", "023"]
+        self.default_order_prefix = "020"
 
         #=============================== TITLE ======================================
 
@@ -54,10 +57,10 @@ class frame_PrintOrder(ctk.CTkFrame):
         prnit_order_container.pack(fill="x", pady=(0, 0), padx=30)
 
         ctk.CTkLabel(master=prnit_order_container, text="PG", text_color="#fff", font=("Iansui", 24)).pack(side="left", padx=(13, 0), pady=5)
-        self.order_combobox = ctk.CTkComboBox(master=prnit_order_container, state="readonly", width=105, height = 40, font=("Iansui", 20), values=["018", "019", "020", "021"], button_color=parent.theme_color, border_color=parent.theme_color, 
+        self.order_combobox = ctk.CTkComboBox(master=prnit_order_container, state="readonly", width=105, height = 40, font=("Iansui", 20), values=self.order_prefix, button_color=parent.theme_color, border_color=parent.theme_color, 
                     border_width=2, button_hover_color=parent.theme_color_dark, dropdown_hover_color=parent.theme_color_dark, dropdown_fg_color=parent.theme_color, dropdown_text_color=parent.dark0_color)
         self.order_combobox.pack(side="left", padx=(13, 0), pady=15)
-        self.order_combobox.set("019")
+        self.order_combobox.set(self.default_order_prefix)
         self.order_entry = ctk.CTkEntry(master=prnit_order_container, width=225, height = 40, font=("Iansui", 20), placeholder_text="請輸入貨單後五碼", border_color=parent.theme_color, border_width=2)
         self.order_entry.pack(side="left", padx=(23, 0), pady=5)
         
@@ -319,12 +322,12 @@ class frame_PrintOrder(ctk.CTkFrame):
     def printOrderAgain(self, order, invoice):
         def print_cancel_close(_status:str, order, invoice):
             self.database.delete_data(order)
-            self.database.insert_data(order, _status, invoice, self.store_table_combobox.get())
+            self.database.insert_data(order, _status, invoice, self.store_table_combobox.get(), "-", "-")
             self.update_table(self.view_status_enrty.get(), self.store_table_combobox.get())
         
-        def print_success(order, invoice):
+        def print_success(order, invoice, using_coupon, order_establish_date):
             self.database.delete_data(order)
-            self.database.insert_data(order, 'success', invoice, self.store_table_combobox.get())
+            self.database.insert_data(order, 'success', invoice, self.store_table_combobox.get(), using_coupon, order_establish_date)
             self.update_table(self.view_status_enrty.get(), self.store_table_combobox.get())
             
         if order == "":
@@ -391,13 +394,9 @@ class frame_PrintOrder(ctk.CTkFrame):
             print_success(order, invoice)
             print("closed tab error")
             
-        elif result == ReturnType.SUCCESS:
-            print_success(order, invoice)
-            print("Success!")
-        
         else:
-            print("Enum error!")
-            return
+            print_success(order, invoice, result[0], result[1])
+            print("Success!")
         
     def printToprinter(self):
         validate_string = self.invoice_entry.get()
@@ -409,11 +408,11 @@ class frame_PrintOrder(ctk.CTkFrame):
             return
         
         def print_cancel_close(_status:str, order, invoice):
-            self.database.insert_data(order, _status, invoice, self.store_table_combobox.get())
+            self.database.insert_data(order, _status, invoice, self.store_table_combobox.get(), "-", "-")
             self.update_table(self.view_status_enrty.get(), self.store_table_combobox.get())
         
-        def print_success(order, invoice):
-            self.database.insert_data(order, 'success', invoice, self.store_table_combobox.get())
+        def print_success(order, invoice, using_coupon, order_establish_date):
+            self.database.insert_data(order, 'success', invoice, self.store_table_combobox.get(), using_coupon, order_establish_date)
             self.update_table(self.view_status_enrty.get(), self.store_table_combobox.get())
         
         if not self.order_combobox.get():
@@ -528,10 +527,6 @@ class frame_PrintOrder(ctk.CTkFrame):
             print_success(current_order, current_invoice)
             print("closed tab error")
             
-        elif result == ReturnType.SUCCESS:
-            print_success(current_order, current_invoice)
-            print("Success!")
-        
         else:
-            print("Enum error!")
-            return
+            print_success(current_order, current_invoice, result[0], result[1])
+            print("Success!")
