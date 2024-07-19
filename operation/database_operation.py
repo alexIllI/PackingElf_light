@@ -43,7 +43,8 @@ class DataBase():
         
         # MySQL connection setup
         self.connection = mysql.connector.connect(
-            host = "192.168.1.114",
+            # host = "192.168.1.114",
+            host = 'localhost',
             user = os.getenv('DB_USER'),
             password = os.getenv('DB_PASSWORD'),
             database=self.database_name

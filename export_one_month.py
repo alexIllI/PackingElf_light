@@ -7,7 +7,9 @@ from sqlalchemy import create_engine, inspect
 def connect_db():
     try:
         # Create the database URL for SQLAlchemy
-        database_url = 'mysql+pymysql://root:Meridian0723@192.168.1.114/myacg_data'
+        # db_host = '192.168.1.11'
+        db_host = 'localhost'
+        database_url = f'mysql+pymysql://root:Meridian0723@{db_host}/myacg_data'
         # Create the engine
         engine = create_engine(database_url)
         return engine

@@ -6,7 +6,8 @@ import pymysql
 def connect_db():
     try:
         connection = pymysql.connect(
-            host="192.168.1.114",
+            # host="192.168.1.114",
+            host='localhost',
             user='root',
             password='Meridian0723',
             database='Myacg_data'
