@@ -175,7 +175,7 @@ class DataBase():
            
     def fetch_table_data(self, status, record, output_excel):
         '''
-        status: all, success, close, cancel
+        status: all, success, close, cancel, delivery
         record: unrecorded = False, recorded = True
         output_excel: output Excel name'''
         table_name = "myacg_data_" + output_excel[14:21]

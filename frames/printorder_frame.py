@@ -106,7 +106,7 @@ class frame_PrintOrder(ctk.CTkFrame):
                                                       command=lambda: self.update_table(self.view_status_enrty.get(), self.store_table_combobox.get()))
         self.show_recorded_checkbox.pack(side="right",padx=15, pady=5)
         
-        self.view_status_enrty = ctk.CTkComboBox(master=search_container, state="readonly", width=105, height = 30, font=("Iansui", 16), values=["顯示全部", "成功出貨", "關轉", "取消"], button_color=parent.theme_color, border_color=parent.theme_color, 
+        self.view_status_enrty = ctk.CTkComboBox(master=search_container, state="readonly", width=105, height = 30, font=("Iansui", 16), values=["顯示全部", "成功出貨", "關轉", "取消", "宅配"], button_color=parent.theme_color, border_color=parent.theme_color, 
                     border_width=2, button_hover_color=parent.theme_color_dark, dropdown_hover_color=parent.theme_color_dark, dropdown_fg_color=parent.theme_color, dropdown_text_color=parent.dark0_color, command= lambda value: self.update_table(value, self.store_table_combobox.get()))
         self.view_status_enrty.pack(side="right", padx=(13, 0), pady=5)
         self.view_status_enrty.set("顯示全部")
@@ -185,14 +185,18 @@ class frame_PrintOrder(ctk.CTkFrame):
             datas = self.database.fetch_table_data('close', record, table_name)
         elif status == "取消":
             datas = self.database.fetch_table_data('cancel', record, table_name)
+        elif status == "宅配":
+            datas = self.database.fetch_table_data('delivery', record, table_name)
                 
         for data in datas:
             if data[3] == 'success':
                 self.printed_order_table.insert(parent = '', index = 0, values = (data[0], data[1], data[2], "成功", data[4], data[5]))
-            if data[3] == 'close':
+            elif data[3] == 'close':
                 self.printed_order_table.insert(parent = '', index = 0, values = (data[0], data[1], data[2], "關轉", data[4], data[5]), tags = ("close",))
-            if data[3] == 'cancel':
+            elif data[3] == 'cancel':
                 self.printed_order_table.insert(parent = '', index = 0, values = (data[0], data[1], data[2], "取消", data[4], data[5]), tags = ("cancel",))
+            elif data[3] == 'delivery':
+                self.printed_order_table.insert(parent = '', index = 0, values = (data[0], data[1], data[2], "宅配", data[4], data[5]), tags = ("delivery",))
         
         order_numbers = self.database.count_records(self.store_table_combobox.get(), record) 
         self.label_total_order_number.configure(text = f"目前貨單總數: {order_numbers[0]}")
